@@ -26,7 +26,22 @@ export async function uploadImage(
   }
 ): Promise<UploadResult> {
   try {
-    const result = await cloudinary.uploader.upload(file, {
+    let fileToUpload: string
+
+    // Convert File or Buffer to base64 data URI if needed
+    if (file instanceof File) {
+      const arrayBuffer = await file.arrayBuffer()
+      const buffer = Buffer.from(arrayBuffer)
+      const base64 = buffer.toString('base64')
+      fileToUpload = `data:${file.type};base64,${base64}`
+    } else if (Buffer.isBuffer(file)) {
+      const base64 = file.toString('base64')
+      fileToUpload = `data:image/jpeg;base64,${base64}`
+    } else {
+      fileToUpload = file
+    }
+
+    const result = await cloudinary.uploader.upload(fileToUpload, {
       folder: options?.folder || 'souqora',
       transformation: options?.transformation || [
         { quality: 'auto', fetch_format: 'auto' },

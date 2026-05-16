@@ -1,4 +1,5 @@
 // Performance optimization utilities for SOUQORA
+import React from 'react'
 
 export function lazyLoadComponent<T extends React.ComponentType<any>>(
   componentImport: () => Promise<{ default: T }>

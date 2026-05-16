@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { Select } from "@/components/ui/select"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Header } from "@/components/layout/header"
 import { Footer } from "@/components/layout/footer"
 
@@ -133,22 +133,24 @@ export default function RegisterPage() {
                 <div className="space-y-2">
                   <Label htmlFor="location">Location</Label>
                   <div className="relative">
-                    <MapPin className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
+                    <MapPin className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400 z-10" />
                     <Select
-                      id="location"
                       value={formData.location}
-                      onChange={(e) => setFormData({ ...formData, location: e.target.value })}
-                      className="pl-10"
+                      onValueChange={(value) => setFormData({ ...formData, location: value })}
                       required
                     >
-                      <option value="">Select your city</option>
-                      <option value="casablanca">Casablanca</option>
-                      <option value="marrakech">Marrakech</option>
-                      <option value="rabat">Rabat</option>
-                      <option value="fes">Fes</option>
-                      <option value="tangier">Tangier</option>
-                      <option value="agadir">Agadir</option>
-                      <option value="other">Other</option>
+                      <SelectTrigger className="pl-10">
+                        <SelectValue placeholder="Select your city" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="casablanca">Casablanca</SelectItem>
+                        <SelectItem value="marrakech">Marrakech</SelectItem>
+                        <SelectItem value="rabat">Rabat</SelectItem>
+                        <SelectItem value="fes">Fes</SelectItem>
+                        <SelectItem value="tangier">Tangier</SelectItem>
+                        <SelectItem value="agadir">Agadir</SelectItem>
+                        <SelectItem value="other">Other</SelectItem>
+                      </SelectContent>
                     </Select>
                   </div>
                 </div>

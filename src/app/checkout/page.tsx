@@ -12,7 +12,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
-import { Select } from "@/components/ui/select"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Badge } from "@/components/ui/badge"
 import { Header } from "@/components/layout/header"
 import { Footer } from "@/components/layout/footer"
@@ -153,18 +153,21 @@ export default function CheckoutPage() {
                       <div>
                         <Label htmlFor="city">City *</Label>
                         <Select
-                          id="city"
                           value={formData.city}
-                          onChange={(e) => setFormData({ ...formData, city: e.target.value })}
+                          onValueChange={(value) => setFormData({ ...formData, city: value })}
                           required
                         >
-                          <option value="">Select city</option>
-                          <option value="casablanca">Casablanca</option>
-                          <option value="marrakech">Marrakech</option>
-                          <option value="rabat">Rabat</option>
-                          <option value="fes">Fes</option>
-                          <option value="tangier">Tangier</option>
-                          <option value="agadir">Agadir</option>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select city" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="casablanca">Casablanca</SelectItem>
+                            <SelectItem value="marrakech">Marrakech</SelectItem>
+                            <SelectItem value="rabat">Rabat</SelectItem>
+                            <SelectItem value="fes">Fes</SelectItem>
+                            <SelectItem value="tangier">Tangier</SelectItem>
+                            <SelectItem value="agadir">Agadir</SelectItem>
+                          </SelectContent>
                         </Select>
                       </div>
                       <div>

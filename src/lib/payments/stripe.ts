@@ -1,8 +1,19 @@
 import Stripe from 'stripe'
 
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY || '', {
-  apiVersion: '2024-11-20.acacia',
-})
+let stripe: Stripe | null = null
+
+function getStripe() {
+  if (!stripe) {
+    const apiKey = process.env.STRIPE_SECRET_KEY
+    if (!apiKey) {
+      throw new Error('STRIPE_SECRET_KEY is not set')
+    }
+    stripe = new Stripe(apiKey, {
+      apiVersion: '2026-04-22.dahlia',
+    })
+  }
+  return stripe
+}
 
 export interface StripePaymentIntent {
   clientSecret: string
@@ -16,7 +27,8 @@ export async function createPaymentIntent(
   metadata?: Record<string, string>
 ): Promise<StripePaymentIntent> {
   try {
-    const paymentIntent = await stripe.paymentIntents.create({
+    const stripeInstance = getStripe()
+    const paymentIntent = await stripeInstance.paymentIntents.create({
       amount: Math.round(amount * 100), // Convert to cents
       currency,
       metadata,
@@ -40,7 +52,8 @@ export async function confirmPaymentIntent(
   paymentIntentId: string
 ): Promise<Stripe.PaymentIntent> {
   try {
-    const paymentIntent = await stripe.paymentIntents.retrieve(paymentIntentId)
+    const stripeInstance = getStripe()
+    const paymentIntent = await stripeInstance.paymentIntents.retrieve(paymentIntentId)
     return paymentIntent
   } catch (error) {
     console.error('Stripe confirm payment error:', error)
@@ -53,7 +66,8 @@ export async function refundPayment(
   amount?: number
 ): Promise<Stripe.Refund> {
   try {
-    const refund = await stripe.refunds.create({
+    const stripeInstance = getStripe()
+    const refund = await stripeInstance.refunds.create({
       payment_intent: paymentIntentId,
       amount: amount ? Math.round(amount * 100) : undefined,
     })
@@ -69,7 +83,8 @@ export async function createCustomer(
   name?: string
 ): Promise<Stripe.Customer> {
   try {
-    const customer = await stripe.customers.create({
+    const stripeInstance = getStripe()
+    const customer = await stripeInstance.customers.create({
       email,
       name,
     })

@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Input } from "@/components/ui/input"
-import { Select } from "@/components/ui/select"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Header } from "@/components/layout/header"
 import { Footer } from "@/components/layout/footer"
 
@@ -220,13 +220,18 @@ export default function MarketplacePage() {
                 <label className="text-sm font-medium mb-2 block">Category</label>
                 <Select
                   value={selectedCategory}
-                  onChange={(e) => setSelectedCategory(e.target.value)}
+                  onValueChange={(value) => setSelectedCategory(value)}
                 >
-                  {categories.map((cat) => (
-                    <option key={cat} value={cat}>
-                      {cat}
-                    </option>
-                  ))}
+                  <SelectTrigger>
+                    <SelectValue placeholder="All Categories" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {categories.map((cat) => (
+                      <SelectItem key={cat} value={cat}>
+                        {cat}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
                 </Select>
               </div>
 
@@ -234,13 +239,18 @@ export default function MarketplacePage() {
                 <label className="text-sm font-medium mb-2 block">Location</label>
                 <Select
                   value={selectedLocation}
-                  onChange={(e) => setSelectedLocation(e.target.value)}
+                  onValueChange={(value) => setSelectedLocation(value)}
                 >
-                  {locations.map((loc) => (
-                    <option key={loc} value={loc}>
-                      {loc}
-                    </option>
-                  ))}
+                  <SelectTrigger>
+                    <SelectValue placeholder="All Locations" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {locations.map((loc) => (
+                      <SelectItem key={loc} value={loc}>
+                        {loc}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
                 </Select>
               </div>
 
@@ -248,13 +258,18 @@ export default function MarketplacePage() {
                 <label className="text-sm font-medium mb-2 block">Condition</label>
                 <Select
                   value={selectedCondition}
-                  onChange={(e) => setSelectedCondition(e.target.value)}
+                  onValueChange={(value) => setSelectedCondition(value)}
                 >
-                  {conditions.map((cond) => (
-                    <option key={cond} value={cond}>
-                      {cond}
-                    </option>
-                  ))}
+                  <SelectTrigger>
+                    <SelectValue placeholder="All Conditions" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {conditions.map((cond) => (
+                      <SelectItem key={cond} value={cond}>
+                        {cond}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
                 </Select>
               </div>
 
@@ -262,13 +277,18 @@ export default function MarketplacePage() {
                 <label className="text-sm font-medium mb-2 block">Price Range</label>
                 <Select
                   value={priceRange}
-                  onChange={(e) => setPriceRange(e.target.value)}
+                  onValueChange={(value) => setPriceRange(value)}
                 >
-                  <option value="all">All Prices</option>
-                  <option value="0-500">Under 500 MAD</option>
-                  <option value="500-1000">500 - 1000 MAD</option>
-                  <option value="1000-2000">1000 - 2000 MAD</option>
-                  <option value="2000+">2000+ MAD</option>
+                  <SelectTrigger>
+                    <SelectValue placeholder="All Prices" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Prices</SelectItem>
+                    <SelectItem value="0-500">Under 500 MAD</SelectItem>
+                    <SelectItem value="500-1000">500 - 1000 MAD</SelectItem>
+                    <SelectItem value="1000-2000">1000 - 2000 MAD</SelectItem>
+                    <SelectItem value="2000+">2000+ MAD</SelectItem>
+                  </SelectContent>
                 </Select>
               </div>
 
@@ -276,13 +296,18 @@ export default function MarketplacePage() {
                 <label className="text-sm font-medium mb-2 block">Sort By</label>
                 <Select
                   value={sortBy}
-                  onChange={(e) => setSortBy(e.target.value)}
+                  onValueChange={(value) => setSortBy(value)}
                 >
-                  <option value="featured">Featured</option>
-                  <option value="price-low">Price: Low to High</option>
-                  <option value="price-high">Price: High to Low</option>
-                  <option value="newest">Newest</option>
-                  <option value="rating">Highest Rated</option>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Sort By" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="featured">Featured</SelectItem>
+                    <SelectItem value="price-low">Price: Low to High</SelectItem>
+                    <SelectItem value="price-high">Price: High to Low</SelectItem>
+                    <SelectItem value="newest">Newest</SelectItem>
+                    <SelectItem value="rating">Highest Rated</SelectItem>
+                  </SelectContent>
                 </Select>
               </div>
             </div>

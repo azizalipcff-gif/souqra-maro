@@ -591,7 +591,7 @@ export default function AddBusinessPage() {
                         />
                         <Button
                           type="button"
-                          variant="destructive"
+                          variant="danger"
                           size="icon"
                           className="absolute -top-2 -right-2"
                           onClick={() => removeImage("logo")}
@@ -634,7 +634,7 @@ export default function AddBusinessPage() {
                         />
                         <Button
                           type="button"
-                          variant="destructive"
+                          variant="danger"
                           size="icon"
                           className="absolute top-2 right-2"
                           onClick={() => removeImage("cover")}
@@ -701,7 +701,7 @@ export default function AddBusinessPage() {
                           />
                           <Button
                             type="button"
-                            variant="destructive"
+                            variant="danger"
                             size="icon"
                             className="absolute top-1 right-1"
                             onClick={() => removeImage("gallery", index)}
