@@ -11,6 +11,7 @@ import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Header } from "@/components/layout/header"
 import { Footer } from "@/components/layout/footer"
+import { supabase } from "@/lib/supabase/client"
 
 export default function RegisterPage() {
   const [showPassword, setShowPassword] = useState(false)
@@ -29,6 +30,23 @@ export default function RegisterPage() {
     e.preventDefault()
     // Handle registration logic here
     console.log("Register:", { ...formData, accountType })
+  }
+
+  const handleGoogleLogin = async () => {
+    try {
+      const { error } = await supabase.auth.signInWithOAuth({
+        provider: 'google',
+        options: {
+          redirectTo: `${window.location.origin}/auth/callback`,
+        },
+      })
+
+      if (error) {
+        console.error('Google login error:', error)
+      }
+    } catch (error) {
+      console.error('Google login error:', error)
+    }
   }
 
   return (
@@ -238,7 +256,7 @@ export default function RegisterPage() {
                 </div>
 
                 <div className="mt-6 grid grid-cols-2 gap-4">
-                  <Button variant="outline" className="w-full">
+                  <Button variant="outline" className="w-full" onClick={handleGoogleLogin}>
                     Google
                   </Button>
                   <Button variant="outline" className="w-full">

@@ -10,6 +10,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Header } from "@/components/layout/header"
 import { Footer } from "@/components/layout/footer"
+import { supabase } from "@/lib/supabase/client"
 
 export default function LoginPage() {
   const [showPassword, setShowPassword] = useState(false)
@@ -22,6 +23,23 @@ export default function LoginPage() {
     e.preventDefault()
     // Handle login logic here
     console.log("Login:", formData)
+  }
+
+  const handleGoogleLogin = async () => {
+    try {
+      const { error } = await supabase.auth.signInWithOAuth({
+        provider: 'google',
+        options: {
+          redirectTo: `${window.location.origin}/auth/callback`,
+        },
+      })
+
+      if (error) {
+        console.error('Google login error:', error)
+      }
+    } catch (error) {
+      console.error('Google login error:', error)
+    }
   }
 
   return (
@@ -116,7 +134,7 @@ export default function LoginPage() {
                 </div>
 
                 <div className="mt-6 grid grid-cols-2 gap-4">
-                  <Button variant="outline" className="w-full">
+                  <Button variant="outline" className="w-full" onClick={handleGoogleLogin}>
                     Google
                   </Button>
                   <Button variant="outline" className="w-full">
