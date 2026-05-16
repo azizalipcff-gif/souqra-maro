@@ -3,10 +3,11 @@ import { ProductRepository } from '@/lib/db/models'
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const product = await ProductRepository.findById(params.id)
+    const { id } = await params
+    const product = await ProductRepository.findById(id)
 
     if (!product) {
       return NextResponse.json(
@@ -16,7 +17,7 @@ export async function GET(
     }
 
     // Increment view count
-    await ProductRepository.update(params.id, {
+    await ProductRepository.update(id, {
       views_count: product.views_count + 1,
     } as any)
 
@@ -32,11 +33,12 @@ export async function GET(
 
 export async function PUT(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await params
     const body = await request.json()
-    const product = await ProductRepository.update(params.id, body)
+    const product = await ProductRepository.update(id, body)
 
     return NextResponse.json({
       product,
@@ -53,10 +55,11 @@ export async function PUT(
 
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    await ProductRepository.delete(params.id)
+    const { id } = await params
+    await ProductRepository.delete(id)
 
     return NextResponse.json({ message: 'Product deleted successfully' })
   } catch (error) {
