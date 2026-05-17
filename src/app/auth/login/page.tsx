@@ -1,9 +1,10 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect, Suspense } from "react"
 import Link from "next/link"
+import { useRouter, useSearchParams } from "next/navigation"
 import { motion } from "framer-motion"
-import { Mail, Lock, Eye, EyeOff, Store, User } from "lucide-react"
+import { Mail, Lock, Eye, EyeOff, Store, User, Loader2, AlertCircle } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
@@ -12,12 +13,23 @@ import { Header } from "@/components/layout/header"
 import { Footer } from "@/components/layout/footer"
 import { getSupabase } from "@/lib/supabase/client"
 
-export default function LoginPage() {
+function LoginForm() {
+  const router = useRouter()
+  const searchParams = useSearchParams()
   const [showPassword, setShowPassword] = useState(false)
+  const [isGoogleLoading, setIsGoogleLoading] = useState(false)
+  const [error, setError] = useState<string | null>(null)
   const [formData, setFormData] = useState({
     email: "",
     password: "",
   })
+
+  useEffect(() => {
+    const errorParam = searchParams.get('error')
+    if (errorParam) {
+      setError(decodeURIComponent(errorParam))
+    }
+  }, [searchParams])
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
@@ -26,19 +38,29 @@ export default function LoginPage() {
   }
 
   const handleGoogleLogin = async () => {
+    setIsGoogleLoading(true)
     try {
-      const { error } = await getSupabase().auth.signInWithOAuth({
+      const { data, error } = await getSupabase().auth.signInWithOAuth({
         provider: 'google',
         options: {
           redirectTo: `${window.location.origin}/auth/callback`,
+          queryParams: {
+            access_type: 'offline',
+            prompt: 'consent',
+          },
         },
       })
 
       if (error) {
         console.error('Google login error:', error)
+        alert(`Login failed: ${error.message}`)
+        setIsGoogleLoading(false)
       }
+      // If successful, the redirect will happen automatically
     } catch (error) {
       console.error('Google login error:', error)
+      alert('An unexpected error occurred during login')
+      setIsGoogleLoading(false)
     }
   }
 
@@ -68,6 +90,21 @@ export default function LoginPage() {
               <p className="text-gray-600 mt-2">Sign in to your SOUQORA account</p>
             </CardHeader>
             <CardContent>
+              {error && (
+                <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg flex items-start gap-3">
+                  <AlertCircle className="h-5 w-5 text-red-600 flex-shrink-0 mt-0.5" />
+                  <div className="flex-1">
+                    <p className="text-sm text-red-800 font-medium">Authentication Error</p>
+                    <p className="text-sm text-red-700 mt-1">{error}</p>
+                  </div>
+                  <button
+                    onClick={() => setError(null)}
+                    className="text-red-400 hover:text-red-600"
+                  >
+                    ×
+                  </button>
+                </div>
+              )}
               <form onSubmit={handleSubmit} className="space-y-6">
                 <div className="space-y-2">
                   <Label htmlFor="email">Email Address</Label>
@@ -134,10 +171,22 @@ export default function LoginPage() {
                 </div>
 
                 <div className="mt-6 grid grid-cols-2 gap-4">
-                  <Button variant="outline" className="w-full" onClick={handleGoogleLogin}>
-                    Google
+                  <Button 
+                    variant="outline" 
+                    className="w-full" 
+                    onClick={handleGoogleLogin}
+                    disabled={isGoogleLoading}
+                  >
+                    {isGoogleLoading ? (
+                      <>
+                        <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                        Connecting...
+                      </>
+                    ) : (
+                      'Google'
+                    )}
                   </Button>
-                  <Button variant="outline" className="w-full">
+                  <Button variant="outline" className="w-full" disabled>
                     Facebook
                   </Button>
                 </div>
@@ -163,5 +212,17 @@ export default function LoginPage() {
 
       <Footer />
     </div>
+  )
+}
+
+export default function LoginPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen bg-gradient-to-br from-white via-blue-50 to-white flex items-center justify-center">
+        <Loader2 className="h-8 w-8 animate-spin text-royal-blue" />
+      </div>
+    }>
+      <LoginForm />
+    </Suspense>
   )
 }
