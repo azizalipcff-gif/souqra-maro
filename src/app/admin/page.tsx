@@ -1,75 +1,148 @@
 "use client"
 
+import { useEffect, useState } from "react"
 import Link from "next/link"
 import { motion } from "framer-motion"
 import { 
   Users, ShoppingBag, Package, TrendingUp, AlertTriangle,
-  CheckCircle, Clock, DollarSign, ArrowUpRight, Eye, Edit, Trash2, Ban
+  CheckCircle, Clock, DollarSign, ArrowUpRight, Eye, Edit, Trash2, Ban, Loader2
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Sidebar } from "@/components/layout/sidebar"
 import { Avatar } from "@/components/ui/avatar"
+import { getSupabase } from "@/lib/supabase/client"
 
 export default function AdminDashboardPage() {
-  const stats = [
+  const [isLoading, setIsLoading] = useState(true)
+  const [pendingApprovals, setPendingApprovals] = useState<any[]>([])
+  const [stats, setStats] = useState([
     {
       title: "Total Users",
-      value: "12,456",
+      value: "0",
       change: "+15.3%",
       trend: "up",
       icon: Users,
     },
     {
       title: "Total Sellers",
-      value: "1,234",
+      value: "0",
       change: "+8.7%",
       trend: "up",
       icon: ShoppingBag,
     },
     {
       title: "Total Products",
-      value: "45,678",
+      value: "0",
       change: "+12.1%",
       trend: "up",
       icon: Package,
     },
     {
       title: "Revenue",
-      value: "2.3M",
+      value: "0",
       change: "+23.5%",
       trend: "up",
       icon: DollarSign,
     },
-  ]
+  ])
 
-  const pendingApprovals = [
-    {
-      id: 1,
-      type: "business",
-      name: "Moroccan Crafts Co",
-      email: "contact@moroccancrafts.ma",
-      city: "Casablanca",
-      submitted: "2024-01-15",
-    },
-    {
-      id: 2,
-      type: "business",
-      name: "TechFix Services",
-      email: "info@techfix.ma",
-      city: "Rabat",
-      submitted: "2024-01-14",
-    },
-    {
-      id: 3,
-      type: "seller",
-      name: "Atlas Treasures",
-      email: "info@atlastreasures.ma",
-      city: "Fes",
-      submitted: "2024-01-13",
-    },
-  ]
+  useEffect(() => {
+    fetchDashboardData()
+  }, [])
+
+  const fetchDashboardData = async () => {
+    try {
+      // Fetch pending businesses
+      const { data: businesses } = await getSupabase()
+        .from('businesses')
+        .select('*')
+        .eq('approved', false)
+        .eq('status', 'pending')
+        .order('created_at', { ascending: false })
+        .limit(5)
+
+      if (businesses) {
+        setPendingApprovals(businesses.map((b: any) => ({
+          id: b.id,
+          type: 'business',
+          name: b.name,
+          email: b.email,
+          city: b.city,
+          submitted: new Date(b.created_at).toLocaleDateString(),
+        })))
+      }
+
+      // Fetch stats (mock for now, would be real queries in production)
+      setStats([
+        {
+          title: "Total Users",
+          value: "12,456",
+          change: "+15.3%",
+          trend: "up",
+          icon: Users,
+        },
+        {
+          title: "Total Sellers",
+          value: "1,234",
+          change: "+8.7%",
+          trend: "up",
+          icon: ShoppingBag,
+        },
+        {
+          title: "Total Products",
+          value: "45,678",
+          change: "+12.1%",
+          trend: "up",
+          icon: Package,
+        },
+        {
+          title: "Revenue",
+          value: "2.3M",
+          change: "+23.5%",
+          trend: "up",
+          icon: DollarSign,
+        },
+      ])
+    } catch (error) {
+      console.error('Error fetching dashboard data:', error)
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
+  const handleApprove = async (id: string) => {
+    try {
+      const { error } = await getSupabase()
+        .from('businesses')
+        .update({ approved: true, status: 'active' })
+        .eq('id', id)
+
+      if (error) throw error
+
+      // Refresh data
+      fetchDashboardData()
+    } catch (error) {
+      console.error('Error approving business:', error)
+    }
+  }
+
+  const handleReject = async (id: string) => {
+    try {
+      const { error } = await getSupabase()
+        .from('businesses')
+        .update({ status: 'rejected' })
+        .eq('id', id)
+
+      if (error) throw error
+
+      // Refresh data
+      fetchDashboardData()
+    } catch (error) {
+      console.error('Error rejecting business:', error)
+    }
+  }
 
   const recentReports = [
     {
@@ -124,6 +197,14 @@ export default function AdminDashboardPage() {
       time: "2 hours ago",
     },
   ]
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-white via-blue-50 to-white flex items-center justify-center">
+        <Loader2 className="h-12 w-12 animate-spin text-royal-blue" />
+      </div>
+    )
+  }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-white via-blue-50 to-white">
@@ -222,11 +303,11 @@ export default function AdminDashboardPage() {
                           <Eye className="h-4 w-4 mr-1" />
                           Review
                         </Button>
-                        <Button size="sm">
+                        <Button size="sm" onClick={() => handleApprove(item.id)}>
                           <CheckCircle className="h-4 w-4 mr-1" />
                           Approve
                         </Button>
-                        <Button size="sm" variant="danger">
+                        <Button size="sm" variant="danger" onClick={() => handleReject(item.id)}>
                           <Ban className="h-4 w-4 mr-1" />
                           Reject
                         </Button>

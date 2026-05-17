@@ -13,6 +13,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Badge } from "@/components/ui/badge"
 import { Header } from "@/components/layout/header"
 import { Footer } from "@/components/layout/footer"
+import { getSupabase } from "@/lib/supabase/client"
+import { validateBusinessData } from "@/lib/validation/business-validation"
 
 const MOROCCAN_CITIES = [
   "Casablanca",
@@ -72,6 +74,7 @@ export default function AddBusinessPage() {
   const [isAuthenticated, setIsAuthenticated] = useState(false)
   const [isLoading, setIsLoading] = useState(true)
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const [uploadProgress, setUploadProgress] = useState(0)
   const [error, setError] = useState("")
   const [success, setSuccess] = useState(false)
 
@@ -129,14 +132,20 @@ export default function AddBusinessPage() {
 
   // Auth check
   useEffect(() => {
-    const checkAuth = () => {
-      const token = localStorage.getItem("token")
-      if (!token) {
-        router.push("/login?redirect=/add-business")
-      } else {
-        setIsAuthenticated(true)
+    const checkAuth = async () => {
+      try {
+        const { data: { session } } = await getSupabase().auth.getSession()
+        if (!session) {
+          router.push("/auth/login?redirect=/add-business")
+        } else {
+          setIsAuthenticated(true)
+        }
+      } catch (error) {
+        console.error('Auth check error:', error)
+        router.push("/auth/login?redirect=/add-business")
+      } finally {
+        setIsLoading(false)
       }
-      setIsLoading(false)
     }
 
     checkAuth()
@@ -235,15 +244,11 @@ export default function AddBusinessPage() {
     setIsSubmitting(true)
 
     try {
-      // Validation
-      if (!formData.name || !formData.shortDescription || !formData.category || !formData.city) {
-        setError("Please fill in all required fields")
-        setIsSubmitting(false)
-        return
-      }
-
-      if (!images.logo) {
-        setError("Please upload a business logo")
+      // Comprehensive validation
+      const validation = validateBusinessData(formData, services, images)
+      if (!validation.isValid) {
+        const errorMessages = validation.errors.map(err => `${err.field}: ${err.message}`).join(', ')
+        setError(errorMessages)
         setIsSubmitting(false)
         return
       }
@@ -255,7 +260,7 @@ export default function AddBusinessPage() {
       if (images.cover) uploadFormData.append("cover", images.cover)
       images.gallery.forEach((file) => uploadFormData.append("gallery", file))
 
-      // Upload images
+      // Upload images with progress tracking
       const uploadResponse = await fetch("/api/upload", {
         method: "POST",
         body: uploadFormData,
@@ -264,6 +269,8 @@ export default function AddBusinessPage() {
       if (!uploadResponse.ok) {
         throw new Error("Failed to upload images")
       }
+
+      setUploadProgress(100)
 
       const uploadData = await uploadResponse.json()
 
@@ -275,11 +282,16 @@ export default function AddBusinessPage() {
         images: uploadData.images,
       }
 
+      const { data: { session } } = await getSupabase().auth.getSession()
+      if (!session) {
+        throw new Error("Not authenticated")
+      }
+
       const response = await fetch("/api/businesses", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          Authorization: `Bearer ${localStorage.getItem("token")}`,
+          Authorization: `Bearer ${session.access_token}`,
         },
         body: JSON.stringify(businessData),
       })
@@ -807,7 +819,7 @@ export default function AddBusinessPage() {
                 {isSubmitting ? (
                   <>
                     <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                    Submitting...
+                    {uploadProgress > 0 ? `Uploading... ${uploadProgress}%` : 'Submitting...'}
                   </>
                 ) : (
                   "Submit Business"
