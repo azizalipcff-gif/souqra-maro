@@ -1,18 +1,69 @@
 "use client"
 
 import Link from "next/link"
+import { useRouter } from "next/navigation"
 import { motion } from "framer-motion"
-import { Search, ShoppingCart, Heart, User, Menu, X } from "lucide-react"
+import { Search, ShoppingCart, Heart, User, Menu, X, LogOut, ShoppingBag, ChevronDown } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Avatar } from "@/components/ui/avatar"
 import { Badge } from "@/components/ui/badge"
 import { DarkModeToggle } from "@/components/ui/dark-mode-toggle"
-import { useState } from "react"
+import { useState, useEffect } from "react"
+import { getSupabase } from "@/lib/supabase/client"
 
 export function Header() {
+  const router = useRouter()
   const [isMenuOpen, setIsMenuOpen] = useState(false)
-  const [cartCount] = useState(3)
+  const [isDropdownOpen, setIsDropdownOpen] = useState(false)
+  const [isAuthenticated, setIsAuthenticated] = useState(false)
+  const [profile, setProfile] = useState<any>(null)
+  const [isLoading, setIsLoading] = useState(true)
+
+  useEffect(() => {
+    checkAuth()
+  }, [])
+
+  const checkAuth = async () => {
+    try {
+      const { data: { session } } = await getSupabase().auth.getSession()
+      if (session) {
+        setIsAuthenticated(true)
+        await loadProfile()
+      }
+    } catch (error) {
+      console.error('Auth check error:', error)
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
+  const loadProfile = async () => {
+    try {
+      const { data: { session } } = await getSupabase().auth.getSession()
+      if (!session) return
+
+      const response = await fetch('/api/profiles', {
+        headers: {
+          Authorization: `Bearer ${session.access_token}`,
+        },
+      })
+
+      const data = await response.json()
+      if (data.profile) {
+        setProfile(data.profile)
+      }
+    } catch (error) {
+      console.error('Profile load error:', error)
+    }
+  }
+
+  const handleLogout = async () => {
+    await getSupabase().auth.signOut()
+    setIsAuthenticated(false)
+    setProfile(null)
+    router.push('/')
+  }
 
   return (
     <motion.header
@@ -89,19 +140,81 @@ export function Header() {
             <Link href="/cart" className="relative">
               <Button variant="ghost" size="icon">
                 <ShoppingCart className="h-5 w-5" />
-                {cartCount > 0 && (
-                  <Badge
-                    variant="danger"
-                    className="absolute -top-1 -right-1 h-5 w-5 flex items-center justify-center p-0 text-xs"
-                  >
-                    {cartCount}
-                  </Badge>
-                )}
               </Button>
             </Link>
-            <Link href="/profile">
-              <Avatar />
-            </Link>
+
+            {/* User Account */}
+            {!isLoading && (
+              <>
+                {isAuthenticated ? (
+                  <div className="relative">
+                    <button
+                      onClick={() => setIsDropdownOpen(!isDropdownOpen)}
+                      className="flex items-center space-x-2 hover:bg-white/10 rounded-lg p-2 transition-colors"
+                    >
+                      {profile?.avatar_url ? (
+                        <img
+                          src={profile.avatar_url}
+                          alt="Profile"
+                          className="w-8 h-8 rounded-full object-cover"
+                        />
+                      ) : (
+                        <Avatar className="w-8 h-8" />
+                      )}
+                      <span className="hidden md:block text-sm font-medium">
+                        {profile?.username || profile?.full_name || 'User'}
+                      </span>
+                      <ChevronDown className="h-4 w-4" />
+                    </button>
+
+                    {isDropdownOpen && (
+                      <div className="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-lg border border-gray-200 py-2 z-50">
+                        <Link
+                          href="/profile"
+                          className="flex items-center px-4 py-2 text-sm hover:bg-gray-100"
+                          onClick={() => setIsDropdownOpen(false)}
+                        >
+                          <User className="h-4 w-4 mr-2" />
+                          Profile
+                        </Link>
+                        <Link
+                          href="/add-business"
+                          className="flex items-center px-4 py-2 text-sm hover:bg-gray-100"
+                          onClick={() => setIsDropdownOpen(false)}
+                        >
+                          <ShoppingBag className="h-4 w-4 mr-2" />
+                          Add Business
+                        </Link>
+                        <hr className="my-2" />
+                        <button
+                          onClick={() => {
+                            handleLogout()
+                            setIsDropdownOpen(false)
+                          }}
+                          className="flex items-center w-full px-4 py-2 text-sm hover:bg-gray-100 text-red-600"
+                        >
+                          <LogOut className="h-4 w-4 mr-2" />
+                          Logout
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                ) : (
+                  <div className="flex items-center space-x-2">
+                    <Link href="/auth/login">
+                      <Button variant="ghost" size="sm">
+                        Login
+                      </Button>
+                    </Link>
+                    <Link href="/auth/register">
+                      <Button size="sm">
+                        Register
+                      </Button>
+                    </Link>
+                  </div>
+                )}
+              </>
+            )}
 
             {/* Mobile Menu Button */}
             <Button
@@ -162,6 +275,20 @@ export function Header() {
                   className="pl-10"
                 />
               </div>
+              {!isLoading && !isAuthenticated && (
+                <div className="flex flex-col space-y-2 pt-4 border-t border-white/20">
+                  <Link href="/auth/login">
+                    <Button variant="outline" className="w-full">
+                      Login
+                    </Button>
+                  </Link>
+                  <Link href="/auth/register">
+                    <Button className="w-full">
+                      Register
+                    </Button>
+                  </Link>
+                </div>
+              )}
             </nav>
           </motion.div>
         )}

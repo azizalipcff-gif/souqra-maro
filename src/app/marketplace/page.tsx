@@ -1,9 +1,9 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import Link from "next/link"
 import { motion } from "framer-motion"
-import { Search, SlidersHorizontal, Grid, List, Heart, MapPin, Star } from "lucide-react"
+import { Search, SlidersHorizontal, Grid, List, Heart, MapPin, Star, Loader2, Store } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
@@ -11,107 +11,24 @@ import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Header } from "@/components/layout/header"
 import { Footer } from "@/components/layout/footer"
+import { getSupabase } from "@/lib/supabase/client"
 
-const products = [
-  {
-    id: 1,
-    title: "Premium Moroccan Leather Bag",
-    price: 1200,
-    image: "https://images.unsplash.com/photo-1548036328-c9fa89d128fa?w=400",
-    category: "Fashion",
-    rating: 4.8,
-    reviews: 45,
-    location: "Casablanca",
-    condition: "new",
-    featured: true,
-  },
-  {
-    id: 2,
-    title: "Handwoven Berber Rug",
-    price: 3500,
-    image: "https://images.unsplash.com/photo-1600166898405-da9535204843?w=400",
-    category: "Home Decor",
-    rating: 4.9,
-    reviews: 78,
-    location: "Marrakech",
-    condition: "new",
-    featured: true,
-  },
-  {
-    id: 3,
-    title: "Argan Oil Set",
-    price: 450,
-    image: "https://images.unsplash.com/photo-1608571423902-eed4a5ad8108?w=400",
-    category: "Beauty",
-    rating: 4.7,
-    reviews: 123,
-    location: "Agadir",
-    condition: "new",
-    featured: false,
-  },
-  {
-    id: 4,
-    title: "Traditional Tagine Pot",
-    price: 680,
-    image: "https://images.unsplash.com/photo-1585937421612-70a008356f36?w=400",
-    category: "Kitchen",
-    rating: 4.6,
-    reviews: 56,
-    location: "Fes",
-    condition: "new",
-    featured: false,
-  },
-  {
-    id: 5,
-    title: "Moroccan Tea Set",
-    price: 890,
-    image: "https://images.unsplash.com/photo-1571934811356-5cc061b6821f?w=400",
-    category: "Home Decor",
-    rating: 4.8,
-    reviews: 34,
-    location: "Casablanca",
-    condition: "new",
-    featured: false,
-  },
-  {
-    id: 6,
-    title: "Vintage Brass Lantern",
-    price: 520,
-    image: "https://images.unsplash.com/photo-1513506003011-3b03c801b5f4?w=400",
-    category: "Home Decor",
-    rating: 4.5,
-    reviews: 28,
-    location: "Marrakech",
-    condition: "used",
-    featured: false,
-  },
-  {
-    id: 7,
-    title: "Leather Wallet",
-    price: 320,
-    image: "https://images.unsplash.com/photo-1627123424574-724758594e93?w=400",
-    category: "Fashion",
-    rating: 4.7,
-    reviews: 67,
-    location: "Tangier",
-    condition: "new",
-    featured: false,
-  },
-  {
-    id: 8,
-    title: "Ceramic Vase Set",
-    price: 450,
-    image: "https://images.unsplash.com/photo-1578500494198-246f612d3b3d?w=400",
-    category: "Home Decor",
-    rating: 4.6,
-    reviews: 41,
-    location: "Safi",
-    condition: "new",
-    featured: false,
-  },
+const MOROCCAN_CITIES = [
+  "All Morocco",
+  "Casablanca",
+  "Rabat",
+  "Tangier",
+  "Marrakech",
+  "Agadir",
+  "Fes",
+  "Oujda",
+  "Kenitra",
+  "Tetouan",
+  "Safi",
+  "Meknes",
 ]
 
-const categories = [
+const CATEGORIES = [
   "All Categories",
   "Electronics",
   "Fashion",
@@ -120,31 +37,62 @@ const categories = [
   "Beauty",
   "Sports",
   "Books",
+  "Services",
   "Other",
 ]
-
-const locations = [
-  "All Morocco",
-  "Casablanca",
-  "Marrakech",
-  "Rabat",
-  "Fes",
-  "Tangier",
-  "Agadir",
-  "Other",
-]
-
-const conditions = ["All", "New", "Used"]
 
 export default function MarketplacePage() {
+  const [businesses, setBusinesses] = useState<any[]>([])
+  const [isLoading, setIsLoading] = useState(true)
   const [searchQuery, setSearchQuery] = useState("")
   const [selectedCategory, setSelectedCategory] = useState("All Categories")
   const [selectedLocation, setSelectedLocation] = useState("All Morocco")
-  const [selectedCondition, setSelectedCondition] = useState("All")
-  const [priceRange, setPriceRange] = useState("all")
-  const [sortBy, setSortBy] = useState("featured")
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid")
   const [showFilters, setShowFilters] = useState(false)
+
+  useEffect(() => {
+    loadBusinesses()
+  }, [selectedCategory, selectedLocation, searchQuery])
+
+  const loadBusinesses = async () => {
+    setIsLoading(true)
+    try {
+      let query = getSupabase()
+        .from('businesses')
+        .select(`
+          *,
+          business_images (
+            image_type,
+            image_url,
+            order_index
+          )
+        `)
+        .eq('approved', true)
+        .eq('status', 'active')
+
+      if (selectedCategory !== "All Categories") {
+        query = query.eq('category', selectedCategory)
+      }
+
+      if (selectedLocation !== "All Morocco") {
+        query = query.eq('city', selectedLocation)
+      }
+
+      if (searchQuery) {
+        query = query.ilike('name', `%${searchQuery}%`)
+      }
+
+      const { data } = await query.order('created_at', { ascending: false })
+
+      if (data) {
+        setBusinesses(data)
+      }
+    } catch (error) {
+      console.error('Error loading businesses:', error)
+    } finally {
+      setIsLoading(false)
+    }
+  }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-white via-blue-50 to-white">
@@ -159,7 +107,7 @@ export default function MarketplacePage() {
             className="text-center"
           >
             <h1 className="text-4xl font-bold mb-4">Marketplace</h1>
-            <p className="text-xl text-white/90">Discover amazing products from sellers across Morocco</p>
+            <p className="text-xl text-white/90">Discover amazing businesses from across Morocco</p>
           </motion.div>
         </div>
       </section>
@@ -173,7 +121,7 @@ export default function MarketplacePage() {
               <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
               <Input
                 type="search"
-                placeholder="Search products..."
+                placeholder="Search businesses..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 className="pl-12 h-12 text-lg"
@@ -215,7 +163,7 @@ export default function MarketplacePage() {
             animate={{ height: showFilters ? "auto" : 0, opacity: showFilters ? 1 : 0 }}
             className="overflow-hidden lg:block"
           >
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4 mt-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mt-6">
               <div>
                 <label className="text-sm font-medium mb-2 block">Category</label>
                 <Select
@@ -226,7 +174,7 @@ export default function MarketplacePage() {
                     <SelectValue placeholder="All Categories" />
                   </SelectTrigger>
                   <SelectContent>
-                    {categories.map((cat) => (
+                    {CATEGORIES.map((cat) => (
                       <SelectItem key={cat} value={cat}>
                         {cat}
                       </SelectItem>
@@ -245,7 +193,7 @@ export default function MarketplacePage() {
                     <SelectValue placeholder="All Locations" />
                   </SelectTrigger>
                   <SelectContent>
-                    {locations.map((loc) => (
+                    {MOROCCAN_CITIES.map((loc) => (
                       <SelectItem key={loc} value={loc}>
                         {loc}
                       </SelectItem>
@@ -254,61 +202,18 @@ export default function MarketplacePage() {
                 </Select>
               </div>
 
-              <div>
-                <label className="text-sm font-medium mb-2 block">Condition</label>
-                <Select
-                  value={selectedCondition}
-                  onValueChange={(value) => setSelectedCondition(value)}
+              <div className="flex items-end">
+                <Button
+                  variant="outline"
+                  className="w-full"
+                  onClick={() => {
+                    setSearchQuery("")
+                    setSelectedCategory("All Categories")
+                    setSelectedLocation("All Morocco")
+                  }}
                 >
-                  <SelectTrigger>
-                    <SelectValue placeholder="All Conditions" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {conditions.map((cond) => (
-                      <SelectItem key={cond} value={cond}>
-                        {cond}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div>
-                <label className="text-sm font-medium mb-2 block">Price Range</label>
-                <Select
-                  value={priceRange}
-                  onValueChange={(value) => setPriceRange(value)}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="All Prices" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">All Prices</SelectItem>
-                    <SelectItem value="0-500">Under 500 MAD</SelectItem>
-                    <SelectItem value="500-1000">500 - 1000 MAD</SelectItem>
-                    <SelectItem value="1000-2000">1000 - 2000 MAD</SelectItem>
-                    <SelectItem value="2000+">2000+ MAD</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div>
-                <label className="text-sm font-medium mb-2 block">Sort By</label>
-                <Select
-                  value={sortBy}
-                  onValueChange={(value) => setSortBy(value)}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Sort By" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="featured">Featured</SelectItem>
-                    <SelectItem value="price-low">Price: Low to High</SelectItem>
-                    <SelectItem value="price-high">Price: High to Low</SelectItem>
-                    <SelectItem value="newest">Newest</SelectItem>
-                    <SelectItem value="rating">Highest Rated</SelectItem>
-                  </SelectContent>
-                </Select>
+                  Clear Filters
+                </Button>
               </div>
             </div>
           </motion.div>
@@ -320,95 +225,93 @@ export default function MarketplacePage() {
         <div className="container mx-auto px-4">
           <div className="flex justify-between items-center mb-8">
             <p className="text-gray-600">
-              Showing <span className="font-semibold text-royal-blue">{products.length}</span> products
+              Showing <span className="font-semibold text-royal-blue">{businesses.length}</span> businesses
             </p>
-            <Button variant="outline" size="sm">
-              Clear Filters
-            </Button>
           </div>
 
-          {/* Products Grid */}
-          <div
-            className={
-              viewMode === "grid"
-                ? "grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6"
-                : "flex flex-col gap-4"
-            }
-          >
-            {products.map((product, index) => (
-              <motion.div
-                key={product.id}
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: index * 0.05 }}
-                whileHover={{ y: -5 }}
+          {isLoading ? (
+            <div className="flex justify-center py-12">
+              <Loader2 className="h-8 w-8 animate-spin text-royal-blue" />
+            </div>
+          ) : businesses.length === 0 ? (
+            <div className="text-center py-12">
+              <Store className="h-16 w-16 text-gray-300 mx-auto mb-4" />
+              <p className="text-gray-500 mb-4">No businesses found</p>
+              <Link href="/add-business">
+                <Button>Add Your Business</Button>
+              </Link>
+            </div>
+          ) : (
+            <>
+              {/* Businesses Grid */}
+              <div
+                className={
+                  viewMode === "grid"
+                    ? "grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6"
+                    : "flex flex-col gap-4"
+                }
               >
-                <Link href={`/products/${product.id}`}>
-                  <Card className="overflow-hidden hover:shadow-2xl transition-all duration-300 border-2 border-transparent hover:border-gold h-full">
-                    <div className="relative h-48 overflow-hidden">
-                      <img
-                        src={product.image}
-                        alt={product.title}
-                        className="w-full h-full object-cover hover:scale-110 transition-transform duration-300"
-                      />
-                      {product.featured && (
-                        <Badge className="absolute top-3 right-3" variant="gold">
-                          Featured
-                        </Badge>
-                      )}
-                      <Badge
-                        className="absolute top-3 left-3"
-                        variant={product.condition === "new" ? "success" : "secondary"}
-                      >
-                        {product.condition}
-                      </Badge>
-                    </div>
-                    <CardHeader className="pb-3">
-                      <div className="flex items-center gap-2 mb-2">
-                        <Badge variant="outline" className="text-xs">
-                          {product.category}
-                        </Badge>
-                      </div>
-                      <CardTitle className="text-lg line-clamp-2">{product.title}</CardTitle>
-                      <div className="flex items-center gap-3 text-sm text-gray-500 mt-2">
-                        <span className="flex items-center gap-1">
-                          <MapPin className="h-3 w-3" />
-                          {product.location}
-                        </span>
-                        <span className="flex items-center gap-1">
-                          <Star className="h-3 w-3 fill-gold text-gold" />
-                          {product.rating}
-                          <span className="text-xs">({product.reviews})</span>
-                        </span>
-                      </div>
-                    </CardHeader>
-                    <CardContent className="pb-3">
-                      <p className="text-2xl font-bold text-royal-blue">
-                        {product.price} MAD
-                      </p>
-                    </CardContent>
-                    <CardFooter className="flex gap-2">
-                      <Button className="flex-1">View Details</Button>
-                      <Button variant="outline" size="icon">
-                        <Heart className="h-4 w-4" />
-                      </Button>
-                    </CardFooter>
-                  </Card>
-                </Link>
-              </motion.div>
-            ))}
-          </div>
-
-          {/* Pagination */}
-          <div className="flex justify-center mt-12 gap-2">
-            <Button variant="outline" disabled>
-              Previous
-            </Button>
-            <Button variant="default">1</Button>
-            <Button variant="outline">2</Button>
-            <Button variant="outline">3</Button>
-            <Button variant="outline">Next</Button>
-          </div>
+                {businesses.map((business, index) => {
+                  const coverImage = business.business_images?.find((img: any) => img.image_type === 'cover')
+                  return (
+                    <motion.div
+                      key={business.id}
+                      initial={{ opacity: 0, y: 20 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ delay: index * 0.05 }}
+                      whileHover={{ y: -5 }}
+                    >
+                      <Link href={`/business/${business.slug}`}>
+                        <Card className="overflow-hidden hover:shadow-2xl transition-all duration-300 border-2 border-transparent hover:border-gold h-full">
+                          <div className="relative h-48 overflow-hidden">
+                            {coverImage ? (
+                              <img
+                                src={coverImage.image_url}
+                                alt={business.name}
+                                className="w-full h-full object-cover hover:scale-110 transition-transform duration-300"
+                              />
+                            ) : (
+                              <div className="w-full h-full bg-gradient-to-br from-royal-blue to-purple-600 flex items-center justify-center">
+                                <Store className="h-12 w-12 text-white/50" />
+                              </div>
+                            )}
+                            {business.featured && (
+                              <Badge className="absolute top-3 right-3" variant="gold">
+                                Featured
+                              </Badge>
+                            )}
+                          </div>
+                          <CardHeader className="pb-3">
+                            <div className="flex items-center gap-2 mb-2">
+                              <Badge variant="outline" className="text-xs">
+                                {business.category}
+                              </Badge>
+                            </div>
+                            <CardTitle className="text-lg line-clamp-2">{business.name}</CardTitle>
+                            <div className="flex items-center gap-3 text-sm text-gray-500 mt-2">
+                              <span className="flex items-center gap-1">
+                                <MapPin className="h-3 w-3" />
+                                {business.city}
+                              </span>
+                            </div>
+                          </CardHeader>
+                          <CardContent className="pb-3">
+                            <p className="text-sm text-gray-600 line-clamp-2">{business.short_description}</p>
+                          </CardContent>
+                          <CardFooter className="flex gap-2">
+                            <Button className="flex-1">View Details</Button>
+                            <Button variant="outline" size="icon">
+                              <Heart className="h-4 w-4" />
+                            </Button>
+                          </CardFooter>
+                        </Card>
+                      </Link>
+                    </motion.div>
+                  )
+                })}
+              </div>
+            </>
+          )}
         </div>
       </section>
 

@@ -6,7 +6,8 @@ import { Footer } from "@/components/layout/footer"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
-import { MapPin, Phone, Mail, Clock, Star, Share2, Heart } from "lucide-react"
+import { MapPin, Phone, Mail, Clock, Star, Share2, Heart, Edit2 } from "lucide-react"
+import BusinessActions from "./business-actions"
 
 interface BusinessPageProps {
   params: {
@@ -135,6 +136,7 @@ export default async function BusinessPage({ params }: BusinessPageProps) {
                         </div>
                       </div>
                       <div className="flex gap-2">
+                        <BusinessActions businessId={business.id} userId={business.user_id} />
                         <Button variant="outline" size="icon">
                           <Share2 className="h-4 w-4" />
                         </Button>

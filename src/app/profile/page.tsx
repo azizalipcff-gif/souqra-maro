@@ -1,11 +1,12 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
+import { useRouter } from "next/navigation"
 import Link from "next/link"
 import { motion } from "framer-motion"
 import { 
   User, MapPin, Phone, Mail, ShoppingBag, Heart, Settings, 
-  Shield, LogOut, Camera, Edit2, CheckCircle 
+  Shield, LogOut, Camera, Edit2, CheckCircle, Loader2, X, Globe
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
@@ -17,45 +18,241 @@ import { Badge } from "@/components/ui/badge"
 import { Avatar } from "@/components/ui/avatar"
 import { Header } from "@/components/layout/header"
 import { Footer } from "@/components/layout/footer"
+import { getSupabase } from "@/lib/supabase/client"
+import { processImageForUpload } from "@/lib/performance/image-optimization"
+
+const MOROCCAN_CITIES = [
+  "Casablanca", "Rabat", "Tangier", "Marrakech", "Agadir", "Fes", "Oujda",
+  "Kenitra", "Tetouan", "Safi", "Meknes", "El Jadida", "Beni Mellal", "Nador"
+]
 
 export default function ProfilePage() {
+  const router = useRouter()
+  const [isAuthenticated, setIsAuthenticated] = useState(false)
+  const [isLoading, setIsLoading] = useState(true)
   const [isEditing, setIsEditing] = useState(false)
+  const [isUploading, setIsUploading] = useState(false)
+  const [uploadProgress, setUploadProgress] = useState(0)
+  const [error, setError] = useState("")
+  const [success, setSuccess] = useState("")
+  
+  const [profile, setProfile] = useState<any>(null)
+  const [userBusinesses, setUserBusinesses] = useState<any[]>([])
+  
   const [formData, setFormData] = useState({
-    name: "Ahmed Benali",
-    email: "ahmed@example.com",
-    phone: "+212 600 000 000",
-    location: "Casablanca",
-    bio: "Passionate about Moroccan crafts and supporting local artisans.",
+    full_name: "",
+    username: "",
+    bio: "",
+    phone: "",
+    city: "",
+    website: "",
+    instagram: "",
+    facebook: "",
   })
 
-  const recentOrders = [
-    {
-      id: "ORD-001",
-      date: "2024-01-15",
-      status: "delivered",
-      total: 1200,
-      items: 2,
-    },
-    {
-      id: "ORD-002",
-      date: "2024-01-10",
-      status: "shipped",
-      total: 3500,
-      items: 1,
-    },
-    {
-      id: "ORD-003",
-      date: "2024-01-05",
-      status: "processing",
-      total: 450,
-      items: 3,
-    },
-  ]
+  const [avatarFile, setAvatarFile] = useState<File | null>(null)
+  const [avatarPreview, setAvatarPreview] = useState<string>("")
 
-  const handleSave = () => {
-    setIsEditing(false)
-    // Handle save logic here
-    console.log("Saving profile:", formData)
+  useEffect(() => {
+    checkAuthAndLoadProfile()
+  }, [])
+
+  const checkAuthAndLoadProfile = async () => {
+    try {
+      const { data: { session } } = await getSupabase().auth.getSession()
+      if (!session) {
+        router.push("/auth/login?redirect=/profile")
+        return
+      }
+
+      setIsAuthenticated(true)
+      await loadProfile()
+      await loadUserBusinesses()
+    } catch (error) {
+      console.error('Auth check error:', error)
+      router.push("/auth/login?redirect=/profile")
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
+  const loadProfile = async () => {
+    try {
+      const { data: { session } } = await getSupabase().auth.getSession()
+      if (!session) return
+
+      const response = await fetch('/api/profiles', {
+        headers: {
+          Authorization: `Bearer ${session.access_token}`,
+        },
+      })
+
+      const data = await response.json()
+      
+      if (data.profile) {
+        setProfile(data.profile)
+        setFormData({
+          full_name: data.profile.full_name || "",
+          username: data.profile.username || "",
+          bio: data.profile.bio || "",
+          phone: data.profile.phone || "",
+          city: data.profile.city || "",
+          website: data.profile.website || "",
+          instagram: data.profile.instagram || "",
+          facebook: data.profile.facebook || "",
+        })
+        if (data.profile.avatar_url) {
+          setAvatarPreview(data.profile.avatar_url)
+        }
+      }
+    } catch (error) {
+      console.error('Profile load error:', error)
+    }
+  }
+
+  const loadUserBusinesses = async () => {
+    try {
+      const { data: { session } } = await getSupabase().auth.getSession()
+      if (!session) return
+
+      const { data: businesses } = await getSupabase()
+        .from('businesses')
+        .select('*')
+        .eq('user_id', session.user.id)
+        .order('created_at', { ascending: false })
+
+      if (businesses) {
+        setUserBusinesses(businesses)
+      }
+    } catch (error) {
+      console.error('Businesses load error:', error)
+    }
+  }
+
+  const handleAvatarChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (file) {
+      setAvatarFile(file)
+      setAvatarPreview(URL.createObjectURL(file))
+    }
+  }
+
+  const handleRemoveAvatar = () => {
+    setAvatarFile(null)
+    setAvatarPreview("")
+  }
+
+  const handleAvatarUpload = async () => {
+    if (!avatarFile) return
+
+    setIsUploading(true)
+    setUploadProgress(0)
+
+    try {
+      const { data: { session } } = await getSupabase().auth.getSession()
+      if (!session) throw new Error('Not authenticated')
+
+      // Process and compress image
+      const processedImage = await processImageForUpload(avatarFile)
+      setUploadProgress(50)
+
+      // Upload image
+      const uploadFormData = new FormData()
+      uploadFormData.append('avatar', processedImage)
+      uploadFormData.append('type', 'avatar')
+
+      const uploadResponse = await fetch('/api/upload', {
+        method: 'POST',
+        body: uploadFormData,
+      })
+
+      if (!uploadResponse.ok) throw new Error('Upload failed')
+
+      const uploadData = await uploadResponse.json()
+      setUploadProgress(100)
+
+      // Update profile with new avatar URL
+      const profileResponse = await fetch('/api/profiles', {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${session.access_token}`,
+        },
+        body: JSON.stringify({
+          ...formData,
+          avatar_url: uploadData.images?.avatar,
+        }),
+      })
+
+      if (!profileResponse.ok) throw new Error('Profile update failed')
+
+      const profileData = await profileResponse.json()
+      setProfile(profileData.profile)
+      setAvatarPreview(profileData.profile.avatar_url)
+      setAvatarFile(null)
+      setSuccess('Avatar updated successfully')
+      setTimeout(() => setSuccess(''), 3000)
+    } catch (error) {
+      console.error('Avatar upload error:', error)
+      setError('Failed to upload avatar')
+      setTimeout(() => setError(''), 3000)
+    } finally {
+      setIsUploading(false)
+      setUploadProgress(0)
+    }
+  }
+
+  const handleSave = async () => {
+    setIsLoading(true)
+    setError("")
+
+    try {
+      const { data: { session } } = await getSupabase().auth.getSession()
+      if (!session) throw new Error('Not authenticated')
+
+      const response = await fetch('/api/profiles', {
+        method: profile ? 'PUT' : 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${session.access_token}`,
+        },
+        body: JSON.stringify(formData),
+      })
+
+      if (!response.ok) {
+        const data = await response.json()
+        throw new Error(data.error || 'Failed to save profile')
+      }
+
+      const data = await response.json()
+      setProfile(data.profile)
+      setIsEditing(false)
+      setSuccess('Profile saved successfully')
+      setTimeout(() => setSuccess(''), 3000)
+    } catch (error) {
+      console.error('Profile save error:', error)
+      setError(error instanceof Error ? error.message : 'Failed to save profile')
+      setTimeout(() => setError(''), 3000)
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
+  const handleLogout = async () => {
+    await getSupabase().auth.signOut()
+    router.push('/')
+  }
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-white via-blue-50 to-white flex items-center justify-center">
+        <Loader2 className="h-12 w-12 animate-spin text-royal-blue" />
+      </div>
+    )
+  }
+
+  if (!isAuthenticated) {
+    return null
   }
 
   return (
@@ -69,6 +266,18 @@ export default function ProfilePage() {
         >
           <h1 className="text-3xl font-bold mb-8">My Profile</h1>
 
+          {error && (
+            <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg text-red-600">
+              {error}
+            </div>
+          )}
+
+          {success && (
+            <div className="mb-6 p-4 bg-green-50 border border-green-200 rounded-lg text-green-600">
+              {success}
+            </div>
+          )}
+
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
             {/* Profile Card */}
             <div className="lg:col-span-1">
@@ -76,57 +285,104 @@ export default function ProfilePage() {
                 <CardContent className="p-6">
                   <div className="flex flex-col items-center text-center">
                     <div className="relative mb-4">
-                      <Avatar className="w-32 h-32 border-4 border-gold" />
-                      <button className="absolute bottom-0 right-0 p-2 bg-royal-blue text-white rounded-full hover:bg-royal-blue-light transition-colors">
+                      {avatarPreview ? (
+                        <img
+                          src={avatarPreview}
+                          alt="Profile"
+                          className="w-32 h-32 rounded-full object-cover border-4 border-gold"
+                        />
+                      ) : (
+                        <Avatar className="w-32 h-32 border-4 border-gold" />
+                      )}
+                      <label className="absolute bottom-0 right-0 p-2 bg-royal-blue text-white rounded-full hover:bg-royal-blue-light transition-colors cursor-pointer">
                         <Camera className="h-4 w-4" />
-                      </button>
+                        <input
+                          type="file"
+                          accept="image/*"
+                          onChange={handleAvatarChange}
+                          className="hidden"
+                        />
+                      </label>
                     </div>
-                    <h2 className="text-2xl font-bold mb-1">{formData.name}</h2>
-                    <p className="text-gray-600 mb-4">{formData.email}</p>
-                    <Badge variant="success" className="mb-4">
-                      <CheckCircle className="w-3 h-3 mr-1" />
-                      Verified
-                    </Badge>
+
+                    {avatarFile && (
+                      <div className="w-full mb-4">
+                        <div className="flex gap-2 mb-2">
+                          <Button
+                            size="sm"
+                            onClick={handleAvatarUpload}
+                            disabled={isUploading}
+                            className="flex-1"
+                          >
+                            {isUploading ? (
+                              <>
+                                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                                {uploadProgress > 0 ? `${uploadProgress}%` : 'Uploading...'}
+                              </>
+                            ) : (
+                              'Upload'
+                            )}
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={handleRemoveAvatar}
+                          >
+                            <X className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      </div>
+                    )}
+
+                    <h2 className="text-2xl font-bold mb-1">
+                      {profile?.full_name || 'Complete your profile'}
+                    </h2>
+                    <p className="text-gray-600 mb-4">{profile?.username || '@username'}</p>
+                    
                     <div className="flex items-center gap-2 text-sm text-gray-500 mb-6">
                       <MapPin className="h-4 w-4" />
-                      {formData.location}
+                      {profile?.city || 'Location not set'}
                     </div>
 
                     <div className="grid grid-cols-3 gap-4 w-full mb-6">
                       <div className="text-center p-3 bg-blue-50 rounded-lg">
-                        <p className="text-2xl font-bold text-royal-blue">12</p>
-                        <p className="text-xs text-gray-600">Orders</p>
+                        <p className="text-2xl font-bold text-royal-blue">{userBusinesses.length}</p>
+                        <p className="text-xs text-gray-600">Businesses</p>
                       </div>
                       <div className="text-center p-3 bg-blue-50 rounded-lg">
-                        <p className="text-2xl font-bold text-royal-blue">5</p>
-                        <p className="text-xs text-gray-600">Reviews</p>
+                        <p className="text-2xl font-bold text-royal-blue">
+                          {userBusinesses.filter(b => b.approved).length}
+                        </p>
+                        <p className="text-xs text-gray-600">Approved</p>
                       </div>
                       <div className="text-center p-3 bg-blue-50 rounded-lg">
-                        <p className="text-2xl font-bold text-royal-blue">8</p>
-                        <p className="text-xs text-gray-600">Favorites</p>
+                        <p className="text-2xl font-bold text-royal-blue">
+                          {userBusinesses.filter(b => !b.approved).length}
+                        </p>
+                        <p className="text-xs text-gray-600">Pending</p>
                       </div>
                     </div>
 
                     <div className="space-y-2 w-full">
-                      <Link href="/orders">
+                      <Link href="/add-business">
                         <Button variant="outline" className="w-full justify-start">
                           <ShoppingBag className="h-4 w-4 mr-2" />
-                          My Orders
+                          Add Business
                         </Button>
                       </Link>
-                      <Link href="/favorites">
-                        <Button variant="outline" className="w-full justify-start">
-                          <Heart className="h-4 w-4 mr-2" />
-                          Favorites
-                        </Button>
-                      </Link>
-                      <Link href="/settings">
-                        <Button variant="outline" className="w-full justify-start">
-                          <Settings className="h-4 w-4 mr-2" />
-                          Settings
-                        </Button>
-                      </Link>
-                      <Button variant="outline" className="w-full justify-start text-red-600 hover:text-red-700">
+                      <Button
+                        variant="outline"
+                        className="w-full justify-start"
+                        onClick={() => setIsEditing(!isEditing)}
+                      >
+                        <Edit2 className="h-4 w-4 mr-2" />
+                        {isEditing ? 'Cancel Edit' : 'Edit Profile'}
+                      </Button>
+                      <Button
+                        variant="outline"
+                        className="w-full justify-start text-red-600 hover:text-red-700"
+                        onClick={handleLogout}
+                      >
                         <LogOut className="h-4 w-4 mr-2" />
                         Logout
                       </Button>
@@ -140,33 +396,26 @@ export default function ProfilePage() {
             <div className="lg:col-span-2 space-y-6">
               {/* Personal Information */}
               <Card>
-                <CardHeader className="flex flex-row items-center justify-between">
+                <CardHeader>
                   <CardTitle>Personal Information</CardTitle>
-                  {!isEditing && (
-                    <Button variant="outline" size="sm" onClick={() => setIsEditing(true)}>
-                      <Edit2 className="h-4 w-4 mr-2" />
-                      Edit
-                    </Button>
-                  )}
                 </CardHeader>
                 <CardContent>
                   {isEditing ? (
                     <form className="space-y-4">
                       <div>
-                        <Label htmlFor="name">Full Name</Label>
+                        <Label htmlFor="full_name">Full Name</Label>
                         <Input
-                          id="name"
-                          value={formData.name}
-                          onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                          id="full_name"
+                          value={formData.full_name}
+                          onChange={(e) => setFormData({ ...formData, full_name: e.target.value })}
                         />
                       </div>
                       <div>
-                        <Label htmlFor="email">Email</Label>
+                        <Label htmlFor="username">Username</Label>
                         <Input
-                          id="email"
-                          type="email"
-                          value={formData.email}
-                          onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                          id="username"
+                          value={formData.username}
+                          onChange={(e) => setFormData({ ...formData, username: e.target.value })}
                         />
                       </div>
                       <div>
@@ -179,21 +428,20 @@ export default function ProfilePage() {
                         />
                       </div>
                       <div>
-                        <Label htmlFor="location">Location</Label>
+                        <Label htmlFor="city">City</Label>
                         <Select
-                          value={formData.location}
-                          onValueChange={(value) => setFormData({ ...formData, location: value })}
+                          value={formData.city}
+                          onValueChange={(value) => setFormData({ ...formData, city: value })}
                         >
                           <SelectTrigger>
-                            <SelectValue placeholder="Select location" />
+                            <SelectValue placeholder="Select city" />
                           </SelectTrigger>
                           <SelectContent>
-                            <SelectItem value="casablanca">Casablanca</SelectItem>
-                            <SelectItem value="marrakech">Marrakech</SelectItem>
-                            <SelectItem value="rabat">Rabat</SelectItem>
-                            <SelectItem value="fes">Fes</SelectItem>
-                            <SelectItem value="tangier">Tangier</SelectItem>
-                            <SelectItem value="agadir">Agadir</SelectItem>
+                            {MOROCCAN_CITIES.map((city) => (
+                              <SelectItem key={city} value={city}>
+                                {city}
+                              </SelectItem>
+                            ))}
                           </SelectContent>
                         </Select>
                       </div>
@@ -203,10 +451,44 @@ export default function ProfilePage() {
                           id="bio"
                           value={formData.bio}
                           onChange={(e) => setFormData({ ...formData, bio: e.target.value })}
+                          rows={4}
+                        />
+                      </div>
+                      <div className="grid grid-cols-2 gap-4">
+                        <div>
+                          <Label htmlFor="website">Website</Label>
+                          <Input
+                            id="website"
+                            type="url"
+                            value={formData.website}
+                            onChange={(e) => setFormData({ ...formData, website: e.target.value })}
+                            placeholder="https://"
+                          />
+                        </div>
+                        <div>
+                          <Label htmlFor="instagram">Instagram</Label>
+                          <Input
+                            id="instagram"
+                            value={formData.instagram}
+                            onChange={(e) => setFormData({ ...formData, instagram: e.target.value })}
+                            placeholder="@username"
+                          />
+                        </div>
+                      </div>
+                      <div>
+                        <Label htmlFor="facebook">Facebook</Label>
+                        <Input
+                          id="facebook"
+                          value={formData.facebook}
+                          onChange={(e) => setFormData({ ...formData, facebook: e.target.value })}
+                          placeholder="Facebook URL"
                         />
                       </div>
                       <div className="flex gap-2">
-                        <Button onClick={handleSave}>Save Changes</Button>
+                        <Button onClick={handleSave} disabled={isLoading}>
+                          {isLoading ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : null}
+                          Save Changes
+                        </Button>
                         <Button variant="outline" onClick={() => setIsEditing(false)}>
                           Cancel
                         </Button>
@@ -218,102 +500,110 @@ export default function ProfilePage() {
                         <User className="h-5 w-5 text-gray-400" />
                         <div>
                           <p className="text-sm text-gray-500">Full Name</p>
-                          <p className="font-medium">{formData.name}</p>
+                          <p className="font-medium">{profile?.full_name || 'Not set'}</p>
                         </div>
                       </div>
                       <div className="flex items-center gap-3">
-                        <Mail className="h-5 w-5 text-gray-400" />
+                        <User className="h-5 w-5 text-gray-400" />
                         <div>
-                          <p className="text-sm text-gray-500">Email</p>
-                          <p className="font-medium">{formData.email}</p>
+                          <p className="text-sm text-gray-500">Username</p>
+                          <p className="font-medium">{profile?.username || 'Not set'}</p>
                         </div>
                       </div>
                       <div className="flex items-center gap-3">
                         <Phone className="h-5 w-5 text-gray-400" />
                         <div>
                           <p className="text-sm text-gray-500">Phone</p>
-                          <p className="font-medium">{formData.phone}</p>
+                          <p className="font-medium">{profile?.phone || 'Not set'}</p>
                         </div>
                       </div>
                       <div className="flex items-center gap-3">
                         <MapPin className="h-5 w-5 text-gray-400" />
                         <div>
-                          <p className="text-sm text-gray-500">Location</p>
-                          <p className="font-medium">{formData.location}</p>
+                          <p className="text-sm text-gray-500">City</p>
+                          <p className="font-medium">{profile?.city || 'Not set'}</p>
                         </div>
                       </div>
                       <div>
                         <p className="text-sm text-gray-500 mb-2">Bio</p>
-                        <p className="font-medium">{formData.bio}</p>
+                        <p className="font-medium">{profile?.bio || 'Not set'}</p>
                       </div>
+                      {profile?.website && (
+                        <div className="flex items-center gap-3">
+                          <Globe className="h-5 w-5 text-gray-400" />
+                          <div>
+                            <p className="text-sm text-gray-500">Website</p>
+                            <a href={profile.website} target="_blank" rel="noopener noreferrer" className="font-medium text-blue-600 hover:underline">
+                              {profile.website}
+                            </a>
+                          </div>
+                        </div>
+                      )}
+                      {profile?.instagram && (
+                        <div className="flex items-center gap-3">
+                          <Globe className="h-5 w-5 text-gray-400" />
+                          <div>
+                            <p className="text-sm text-gray-500">Instagram</p>
+                            <p className="font-medium">{profile.instagram}</p>
+                          </div>
+                        </div>
+                      )}
+                      {profile?.facebook && (
+                        <div className="flex items-center gap-3">
+                          <Globe className="h-5 w-5 text-gray-400" />
+                          <div>
+                            <p className="text-sm text-gray-500">Facebook</p>
+                            <p className="font-medium">{profile.facebook}</p>
+                          </div>
+                        </div>
+                      )}
                     </div>
                   )}
                 </CardContent>
               </Card>
 
-              {/* Recent Orders */}
+              {/* My Businesses */}
               <Card>
-                <CardHeader>
-                  <CardTitle>Recent Orders</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-4">
-                    {recentOrders.map((order) => (
-                      <div key={order.id} className="flex items-center justify-between p-4 border rounded-lg hover:border-gold transition-colors">
-                        <div>
-                          <p className="font-semibold">{order.id}</p>
-                          <p className="text-sm text-gray-500">{order.date} • {order.items} items</p>
-                        </div>
-                        <div className="text-right">
-                          <p className="font-bold text-royal-blue">{order.total} MAD</p>
-                          <Badge
-                            variant={
-                              order.status === "delivered" ? "success" :
-                              order.status === "shipped" ? "warning" : "secondary"
-                            }
-                            className="text-xs"
-                          >
-                            {order.status}
-                          </Badge>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                  <Link href="/orders">
-                    <Button variant="outline" className="w-full mt-4">
-                      View All Orders
+                <CardHeader className="flex flex-row items-center justify-between">
+                  <CardTitle>My Businesses</CardTitle>
+                  <Link href="/add-business">
+                    <Button size="sm">
+                      <ShoppingBag className="h-4 w-4 mr-2" />
+                      Add Business
                     </Button>
                   </Link>
-                </CardContent>
-              </Card>
-
-              {/* Account Security */}
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <Shield className="h-5 w-5" />
-                    Account Security
-                  </CardTitle>
                 </CardHeader>
-                <CardContent className="space-y-4">
-                  <div className="flex items-center justify-between p-4 border rounded-lg">
-                    <div>
-                      <p className="font-medium">Password</p>
-                      <p className="text-sm text-gray-500">Last changed 30 days ago</p>
+                <CardContent>
+                  {userBusinesses.length === 0 ? (
+                    <div className="text-center py-8">
+                      <ShoppingBag className="h-12 w-12 text-gray-300 mx-auto mb-4" />
+                      <p className="text-gray-500 mb-4">You haven't added any businesses yet</p>
+                      <Link href="/add-business">
+                        <Button>Add Your First Business</Button>
+                      </Link>
                     </div>
-                    <Button variant="outline" size="sm">
-                      Change Password
-                    </Button>
-                  </div>
-                  <div className="flex items-center justify-between p-4 border rounded-lg">
-                    <div>
-                      <p className="font-medium">Two-Factor Authentication</p>
-                      <p className="text-sm text-gray-500">Add an extra layer of security</p>
+                  ) : (
+                    <div className="space-y-4">
+                      {userBusinesses.map((business) => (
+                        <div key={business.id} className="flex items-center justify-between p-4 border rounded-lg hover:border-gold transition-colors">
+                          <div>
+                            <p className="font-semibold">{business.name}</p>
+                            <p className="text-sm text-gray-500">{business.city} • {business.category}</p>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <Badge
+                              variant={business.approved ? "success" : "warning"}
+                            >
+                              {business.approved ? 'Approved' : 'Pending'}
+                            </Badge>
+                            <Link href={`/business/${business.slug}`}>
+                              <Button variant="outline" size="sm">View</Button>
+                            </Link>
+                          </div>
+                        </div>
+                      ))}
                     </div>
-                    <Button variant="outline" size="sm">
-                      Enable
-                    </Button>
-                  </div>
+                  )}
                 </CardContent>
               </Card>
             </div>
