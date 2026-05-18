@@ -40,7 +40,7 @@ function LoginForm() {
   const handleGoogleLogin = async () => {
     setIsGoogleLoading(true)
     try {
-      const origin = typeof window !== 'undefined' ? window.location.origin : process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000'
+      const origin = process.env.NEXT_PUBLIC_SITE_URL || 'https://souqora.vercel.app'
       const { data, error } = await getSupabase().auth.signInWithOAuth({
         provider: 'google',
         options: {
