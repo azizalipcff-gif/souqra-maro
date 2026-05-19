@@ -1,20 +1,24 @@
-import { BusinessFormData } from "@/types/business"
+import { Phone, MessageCircle, MapPin, Briefcase } from "lucide-react"
+import { BusinessFormData } from "./BusinessForm"
 
 interface BusinessPreviewProps {
-  formData: BusinessFormData
+  data: BusinessFormData
 }
 
-export default function BusinessPreview({ formData }: BusinessPreviewProps) {
+export default function BusinessPreview({ data }: BusinessPreviewProps) {
   return (
-    <div className="bg-white rounded-xl shadow-lg p-6 md:p-8 sticky top-8">
-      <h3 className="text-xl font-bold text-gray-900 mb-6">Live Preview</h3>
-      
-      <div className="border border-gray-200 rounded-lg overflow-hidden">
+    <div className="bg-white rounded-2xl shadow-lg p-6 border border-gray-100">
+      <h3 className="text-lg font-semibold text-gray-900 mb-6 flex items-center gap-2">
+        <span className="text-yellow-500">★</span>
+        Live Preview
+      </h3>
+
+      <div className="border border-gray-200 rounded-xl overflow-hidden">
         {/* Cover Image */}
-        {formData.cover_url ? (
-          <div className="h-48 bg-gray-100">
+        {data.coverUrl ? (
+          <div className="h-48">
             <img
-              src={formData.cover_url}
+              src={data.coverUrl}
               alt="Cover"
               className="w-full h-full object-cover"
             />
@@ -27,17 +31,17 @@ export default function BusinessPreview({ formData }: BusinessPreviewProps) {
 
         {/* Logo */}
         <div className="relative -mt-12 px-6">
-          {formData.logo_url ? (
-            <div className="w-24 h-24 rounded-lg bg-white shadow-lg overflow-hidden border-4 border-white">
+          {data.logoUrl ? (
+            <div className="w-24 h-24 rounded-xl bg-white shadow-lg overflow-hidden border-4 border-white">
               <img
-                src={formData.logo_url}
+                src={data.logoUrl}
                 alt="Logo"
                 className="w-full h-full object-contain"
               />
             </div>
           ) : (
-            <div className="w-24 h-24 rounded-lg bg-white shadow-lg border-4 border-white flex items-center justify-center">
-              <span className="text-gray-300 text-xs">Logo</span>
+            <div className="w-24 h-24 rounded-xl bg-white shadow-lg border-4 border-white flex items-center justify-center">
+              <Briefcase className="h-8 w-8 text-gray-300" />
             </div>
           )}
         </div>
@@ -45,49 +49,49 @@ export default function BusinessPreview({ formData }: BusinessPreviewProps) {
         {/* Business Info */}
         <div className="p-6 pt-8">
           <h4 className="text-xl font-bold text-gray-900 mb-2">
-            {formData.business_name || "Business Name"}
+            {data.businessName || "Business Name"}
           </h4>
-          
-          <div className="space-y-2 text-sm">
-            {formData.category && (
-              <div className="flex items-center gap-2">
-                <span className="text-gray-500">Category:</span>
-                <span className="font-medium text-gray-900">{formData.category}</span>
+
+          <div className="space-y-3 text-sm">
+            {data.category && (
+              <div className="flex items-center gap-2 text-gray-600">
+                <Briefcase className="h-4 w-4 text-blue-600" />
+                <span>{data.category}</span>
               </div>
             )}
-            
-            {formData.city && (
-              <div className="flex items-center gap-2">
-                <span className="text-gray-500">City:</span>
-                <span className="font-medium text-gray-900">{formData.city}</span>
+
+            {data.city && (
+              <div className="flex items-center gap-2 text-gray-600">
+                <MapPin className="h-4 w-4 text-blue-600" />
+                <span>{data.city}</span>
               </div>
             )}
-            
-            {formData.phone && (
-              <div className="flex items-center gap-2">
-                <span className="text-gray-500">Phone:</span>
-                <span className="font-medium text-gray-900">{formData.phone}</span>
+
+            {data.phone && (
+              <div className="flex items-center gap-2 text-gray-600">
+                <Phone className="h-4 w-4 text-blue-600" />
+                <span>{data.phone}</span>
               </div>
             )}
-            
-            {formData.whatsapp && (
-              <div className="flex items-center gap-2">
-                <span className="text-gray-500">WhatsApp:</span>
-                <span className="font-medium text-gray-900">{formData.whatsapp}</span>
+
+            {data.whatsapp && (
+              <div className="flex items-center gap-2 text-gray-600">
+                <MessageCircle className="h-4 w-4 text-green-600" />
+                <span>{data.whatsapp}</span>
               </div>
             )}
           </div>
 
-          {formData.description && (
+          {data.description && (
             <div className="mt-4 pt-4 border-t border-gray-100">
               <p className="text-sm text-gray-600 line-clamp-3">
-                {formData.description}
+                {data.description}
               </p>
             </div>
           )}
 
           <div className="mt-4 pt-4 border-t border-gray-100">
-            <div className="inline-flex items-center gap-2 px-3 py-1 bg-yellow-100 text-yellow-800 rounded-full text-xs font-medium">
+            <div className="inline-flex items-center gap-2 px-3 py-1.5 bg-yellow-100 text-yellow-800 rounded-full text-xs font-medium">
               <span className="w-2 h-2 bg-yellow-500 rounded-full"></span>
               Pending Approval
             </div>

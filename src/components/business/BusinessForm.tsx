@@ -1,268 +1,245 @@
 "use client"
 
 import { useState } from "react"
-import { useRouter } from "next/navigation"
-import { Loader2, Check, AlertCircle } from "lucide-react"
+import { Upload, X } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { getSupabase } from "@/lib/supabase/client"
-import { validateBusinessData, MOROCCAN_CITIES_LIST, BUSINESS_CATEGORIES_LIST } from "@/lib/validations/business"
-import { BusinessFormData } from "@/types/business"
-import BusinessImages from "./BusinessImages"
-import BusinessPreview from "./BusinessPreview"
-import BusinessSuccess from "./BusinessSuccess"
 
-interface BusinessFormProps {
-  userId: string
+// Moroccan cities list
+const MOROCCAN_CITIES = [
+  "Casablanca",
+  "Rabat",
+  "Marrakech",
+  "Fes",
+  "Tangier",
+  "Agadir",
+  "Meknes",
+  "Oujda",
+  "Kenitra",
+  "Tetouan",
+  "El Jadida",
+  "Safi",
+  "Mohammedia",
+  "Beni Mellal",
+  "Nador",
+]
+
+// Business categories
+const BUSINESS_CATEGORIES = [
+  "Restaurant",
+  "Café",
+  "Hotel",
+  "Shopping",
+  "Services",
+  "Healthcare",
+  "Education",
+  "Technology",
+  "Real Estate",
+  "Automotive",
+  "Beauty",
+  "Fitness",
+  "Entertainment",
+  "Other",
+]
+
+export interface BusinessFormData {
+  businessName: string
+  category: string
+  city: string
+  phone: string
+  whatsapp: string
+  description: string
+  logoUrl: string | null
+  coverUrl: string | null
 }
 
-export default function BusinessForm({ userId }: BusinessFormProps) {
-  const router = useRouter()
+interface BusinessFormProps {
+  onFormChange: (data: BusinessFormData) => void
+}
+
+export default function BusinessForm({ onFormChange }: BusinessFormProps) {
   const [formData, setFormData] = useState<BusinessFormData>({
-    business_name: "",
+    businessName: "",
     category: "",
     city: "",
     phone: "",
     whatsapp: "",
     description: "",
-    logo_url: null,
-    cover_url: null,
+    logoUrl: null,
+    coverUrl: null,
   })
-  const [isSubmitting, setIsSubmitting] = useState(false)
-  const [status, setStatus] = useState<"idle" | "success" | "error">("idle")
-  const [errorMessage, setErrorMessage] = useState("")
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
-    setFormData(prev => ({
-      ...prev,
-      [e.target.name]: e.target.value,
-    }))
-  }
-
-  const handleSelectChange = (field: string, value: string) => {
-    setFormData(prev => ({
-      ...prev,
-      [field]: value,
-    }))
-  }
-
-  const handleImageUpload = (type: "logo_url" | "cover_url", url: string) => {
-    setFormData(prev => ({
-      ...prev,
-      [type]: url,
-    }))
-  }
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
-    
-    const validation = validateBusinessData(formData)
-    if (!validation.valid) {
-      const errorMessages = validation.errors.map(err => `${err.field}: ${err.message}`).join(', ')
-      setErrorMessage(errorMessages)
-      setStatus("error")
-      return
-    }
-
-    setIsSubmitting(true)
-    setStatus("idle")
-    setErrorMessage("")
-
-    try {
-      const supabase = getSupabase()
-      
-      const { data, error } = await supabase
-        .from("businesses")
-        .insert({
-          user_id: userId,
-          business_name: formData.business_name.trim(),
-          category: formData.category,
-          city: formData.city,
-          phone: formData.phone.trim(),
-          whatsapp: formData.whatsapp.trim() || null,
-          description: formData.description.trim(),
-          logo_url: formData.logo_url,
-          cover_url: formData.cover_url,
-          approved: false,
-        })
-        .select()
-        .single()
-
-      if (error) {
-        console.error("Business creation error:", error)
-        setErrorMessage(error.message || "Failed to create business")
-        setStatus("error")
-      } else {
-        console.log("Business created successfully:", data)
-        setStatus("success")
-      }
-    } catch (error) {
-      console.error("Unexpected error:", error)
-      setErrorMessage("An unexpected error occurred")
-      setStatus("error")
-    } finally {
-      setIsSubmitting(false)
-    }
-  }
-
-  if (status === "success") {
-    return <BusinessSuccess />
+  const handleInputChange = (field: keyof BusinessFormData, value: string | null) => {
+    const newData = { ...formData, [field]: value }
+    setFormData(newData)
+    onFormChange(newData)
   }
 
   return (
-    <div className="max-w-6xl mx-auto">
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-        {/* Form Section */}
-        <div>
-          <div className="bg-white rounded-xl shadow-lg p-6 md:p-8">
-            <h2 className="text-2xl font-bold text-gray-900 mb-6">Add Your Business</h2>
-            
-            {status === "error" && (
-              <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg flex items-start gap-3">
-                <AlertCircle className="h-5 w-5 text-red-600 flex-shrink-0 mt-0.5" />
-                <div className="flex-1">
-                  <p className="text-sm font-medium text-red-800">Error</p>
-                  <p className="text-sm text-red-700 mt-1">{errorMessage}</p>
-                </div>
-              </div>
-            )}
-
-            <form onSubmit={handleSubmit} className="space-y-6">
-              {/* Business Name */}
-              <div>
-                <Label htmlFor="business_name">Business Name *</Label>
-                <Input
-                  id="business_name"
-                  name="business_name"
-                  type="text"
-                  value={formData.business_name}
-                  onChange={handleChange}
-                  placeholder="Enter your business name"
-                  disabled={isSubmitting}
-                />
-              </div>
-
-              {/* Category */}
-              <div>
-                <Label htmlFor="category">Category *</Label>
-                <Select
-                  value={formData.category}
-                  onValueChange={(value) => handleSelectChange("category", value)}
-                  disabled={isSubmitting}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select a category" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {BUSINESS_CATEGORIES_LIST.map((category) => (
-                      <SelectItem key={category} value={category}>
-                        {category}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-
-              {/* City */}
-              <div>
-                <Label htmlFor="city">City *</Label>
-                <Select
-                  value={formData.city}
-                  onValueChange={(value) => handleSelectChange("city", value)}
-                  disabled={isSubmitting}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select a city" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {MOROCCAN_CITIES_LIST.map((city) => (
-                      <SelectItem key={city} value={city}>
-                        {city}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-
-              {/* Phone */}
-              <div>
-                <Label htmlFor="phone">Phone Number *</Label>
-                <Input
-                  id="phone"
-                  name="phone"
-                  type="tel"
-                  value={formData.phone}
-                  onChange={handleChange}
-                  placeholder="+212 6XX XXX XXX"
-                  disabled={isSubmitting}
-                />
-                <p className="text-xs text-gray-500 mt-1">Format: +212 6XX XXX XXX or 06XX XXX XXX</p>
-              </div>
-
-              {/* WhatsApp */}
-              <div>
-                <Label htmlFor="whatsapp">WhatsApp (Optional)</Label>
-                <Input
-                  id="whatsapp"
-                  name="whatsapp"
-                  type="tel"
-                  value={formData.whatsapp}
-                  onChange={handleChange}
-                  placeholder="+212 6XX XXX XXX"
-                  disabled={isSubmitting}
-                />
-              </div>
-
-              {/* Description */}
-              <div>
-                <Label htmlFor="description">Description *</Label>
-                <Textarea
-                  id="description"
-                  name="description"
-                  value={formData.description}
-                  onChange={handleChange}
-                  placeholder="Describe your business..."
-                  rows={4}
-                  disabled={isSubmitting}
-                />
-              </div>
-
-              {/* Images */}
-              <BusinessImages
-                logoUrl={formData.logo_url}
-                coverUrl={formData.cover_url}
-                onLogoUpload={(url) => handleImageUpload("logo_url", url)}
-                onCoverUpload={(url) => handleImageUpload("cover_url", url)}
-                disabled={isSubmitting}
+    <div className="space-y-6">
+      {/* Logo Upload */}
+      <div className="bg-white rounded-2xl shadow-sm p-6 border border-gray-100">
+        <Label className="text-base font-semibold mb-4 block">Business Logo</Label>
+        <div className="border-2 border-dashed border-gray-300 rounded-xl p-8 text-center hover:border-blue-400 transition-colors cursor-pointer">
+          {formData.logoUrl ? (
+            <div className="relative inline-block">
+              <img
+                src={formData.logoUrl}
+                alt="Logo preview"
+                className="w-32 h-32 object-contain mx-auto rounded-lg"
               />
-
-              {/* Submit Button */}
-              <Button
-                type="submit"
-                className="w-full"
-                disabled={isSubmitting}
+              <button
+                onClick={(e) => {
+                  e.stopPropagation()
+                  handleInputChange("logoUrl", null)
+                }}
+                className="absolute top-0 right-0 bg-red-500 text-white rounded-full p-2 hover:bg-red-600"
               >
-                {isSubmitting ? (
-                  <>
-                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                    Submitting...
-                  </>
-                ) : (
-                  "Submit Business"
-                )}
-              </Button>
-            </form>
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+          ) : (
+            <div>
+              <Upload className="h-12 w-12 mx-auto text-gray-400 mb-4" />
+              <p className="text-gray-600 font-medium mb-2">Upload your logo</p>
+              <p className="text-sm text-gray-500">PNG, JPG up to 5MB</p>
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Cover Image Upload */}
+      <div className="bg-white rounded-2xl shadow-sm p-6 border border-gray-100">
+        <Label className="text-base font-semibold mb-4 block">Cover Image</Label>
+        <div className="border-2 border-dashed border-gray-300 rounded-xl p-8 text-center hover:border-blue-400 transition-colors cursor-pointer">
+          {formData.coverUrl ? (
+            <div className="relative">
+              <img
+                src={formData.coverUrl}
+                alt="Cover preview"
+                className="w-full h-48 object-cover rounded-lg"
+              />
+              <button
+                onClick={(e) => {
+                  e.stopPropagation()
+                  handleInputChange("coverUrl", null)
+                }}
+                className="absolute top-4 right-4 bg-red-500 text-white rounded-full p-2 hover:bg-red-600"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+          ) : (
+            <div>
+              <Upload className="h-12 w-12 mx-auto text-gray-400 mb-4" />
+              <p className="text-gray-600 font-medium mb-2">Upload cover image</p>
+              <p className="text-sm text-gray-500">Recommended: 1200x400px</p>
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Business Information */}
+      <div className="bg-white rounded-2xl shadow-sm p-6 border border-gray-100 space-y-6">
+        <h3 className="text-lg font-semibold text-gray-900">Business Information</h3>
+        
+        <div>
+          <Label htmlFor="businessName">Business Name *</Label>
+          <Input
+            id="businessName"
+            value={formData.businessName}
+            onChange={(e) => handleInputChange("businessName", e.target.value)}
+            placeholder="Enter your business name"
+            className="mt-2"
+          />
+        </div>
+
+        <div>
+          <Label htmlFor="category">Category *</Label>
+          <Select value={formData.category} onValueChange={(value) => handleInputChange("category", value)}>
+            <SelectTrigger className="mt-2">
+              <SelectValue placeholder="Select a category" />
+            </SelectTrigger>
+            <SelectContent>
+              {BUSINESS_CATEGORIES.map((category) => (
+                <SelectItem key={category} value={category}>
+                  {category}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+
+        <div>
+          <Label htmlFor="city">City *</Label>
+          <Select value={formData.city} onValueChange={(value) => handleInputChange("city", value)}>
+            <SelectTrigger className="mt-2">
+              <SelectValue placeholder="Select a city" />
+            </SelectTrigger>
+            <SelectContent>
+              {MOROCCAN_CITIES.map((city) => (
+                <SelectItem key={city} value={city}>
+                  {city}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div>
+            <Label htmlFor="phone">Phone Number *</Label>
+            <Input
+              id="phone"
+              value={formData.phone}
+              onChange={(e) => handleInputChange("phone", e.target.value)}
+              placeholder="+212 6XX XXX XXX"
+              className="mt-2"
+            />
+          </div>
+
+          <div>
+            <Label htmlFor="whatsapp">WhatsApp (Optional)</Label>
+            <Input
+              id="whatsapp"
+              value={formData.whatsapp}
+              onChange={(e) => handleInputChange("whatsapp", e.target.value)}
+              placeholder="+212 6XX XXX XXX"
+              className="mt-2"
+            />
           </div>
         </div>
 
-        {/* Preview Section */}
-        <div className="lg:sticky lg:top-8 h-fit">
-          <BusinessPreview formData={formData} />
+        <div>
+          <Label htmlFor="description">Description *</Label>
+          <Textarea
+            id="description"
+            value={formData.description}
+            onChange={(e) => handleInputChange("description", e.target.value)}
+            placeholder="Describe your business, services, and what makes you unique..."
+            rows={4}
+            className="mt-2"
+          />
         </div>
       </div>
+
+      {/* Image Gallery */}
+      <div className="bg-white rounded-2xl shadow-sm p-6 border border-gray-100">
+        <Label className="text-base font-semibold mb-4 block">Business Gallery</Label>
+        <div className="border-2 border-dashed border-gray-300 rounded-xl p-12 text-center hover:border-blue-400 transition-colors cursor-pointer">
+          <Upload className="h-12 w-12 mx-auto text-gray-400 mb-4" />
+          <p className="text-gray-600 font-medium mb-2">Drag & drop images here</p>
+          <p className="text-sm text-gray-500">or click to browse (up to 10 images)</p>
+        </div>
+      </div>
+
+      {/* Submit Button */}
+      <Button className="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-6 text-lg rounded-2xl">
+        Submit Business
+      </Button>
     </div>
   )
 }
