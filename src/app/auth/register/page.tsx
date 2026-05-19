@@ -36,11 +36,11 @@ export default function RegisterPage() {
   const handleGoogleLogin = async () => {
     setIsGoogleLoading(true)
     try {
-      const origin = process.env.NEXT_PUBLIC_SITE_URL || 'https://souqora.vercel.app'
+      const productionUrl = 'https://souqora-morocco.vercel.app'
       const { data, error } = await getSupabase().auth.signInWithOAuth({
         provider: 'google',
         options: {
-          redirectTo: `${origin}/auth/callback`,
+          redirectTo: `${productionUrl}/auth/callback`,
           queryParams: {
             access_type: 'offline',
             prompt: 'consent',

@@ -60,12 +60,12 @@ function LoginForm() {
 
     try {
       const supabase = getSupabase()
-      const origin = process.env.NEXT_PUBLIC_SITE_URL || 'https://souqora.vercel.app'
+      const productionUrl = 'https://souqora-morocco.vercel.app'
       
       const { data, error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
         options: {
-          redirectTo: `${origin}/auth/callback?next=${encodeURIComponent(next)}`,
+          redirectTo: `${productionUrl}/auth/callback?next=${encodeURIComponent(next)}`,
           queryParams: {
             access_type: 'offline',
             prompt: 'consent',
