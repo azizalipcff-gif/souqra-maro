@@ -2,7 +2,7 @@ import { redirect } from "next/navigation"
 import { createClient } from "@supabase/supabase-js"
 import { Header } from "@/components/layout/header"
 import { Footer } from "@/components/layout/footer"
-import BusinessForm from "@/components/BusinessForm"
+import BusinessForm from "@/components/business/BusinessForm"
 
 // Force dynamic rendering to avoid build-time environment variable issues
 export const dynamic = 'force-dynamic'
@@ -17,7 +17,7 @@ export default async function AddBusinessPage() {
   const { data: { session } } = await supabase.auth.getSession()
 
   if (!session) {
-    redirect("/auth/login?next=/add-business")
+    redirect("/login?next=/add-business")
   }
 
   // Get user ID from session
