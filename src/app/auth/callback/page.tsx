@@ -16,8 +16,9 @@ function AuthCallbackContent() {
       const code = searchParams.get('code')
       const errorParam = searchParams.get('error')
       const errorDescription = searchParams.get('error_description')
+      const next = searchParams.get('next') || '/dashboard'
 
-      console.log('Callback params:', { code: code ? 'present' : 'missing', error: errorParam, errorDescription })
+      console.log('Callback params:', { code: code ? 'present' : 'missing', error: errorParam, errorDescription, next })
 
       // Handle OAuth errors
       if (errorParam) {
@@ -25,7 +26,7 @@ function AuthCallbackContent() {
         setError(errorDescription || errorParam)
         setStatus('error')
         setTimeout(() => {
-          router.push(`/auth/login?error=${encodeURIComponent(errorDescription || errorParam)}`)
+          router.push(`/login?error=${encodeURIComponent(errorDescription || errorParam)}&next=${encodeURIComponent(next)}`)
         }, 2000)
         return
       }
@@ -35,7 +36,7 @@ function AuthCallbackContent() {
         setError('no_code')
         setStatus('error')
         setTimeout(() => {
-          router.push('/auth/login?error=no_code')
+          router.push(`/login?error=no_code&next=${encodeURIComponent(next)}`)
         }, 2000)
         return
       }
@@ -50,7 +51,7 @@ function AuthCallbackContent() {
           setError(exchangeError.message)
           setStatus('error')
           setTimeout(() => {
-            router.push(`/auth/login?error=${encodeURIComponent(exchangeError.message)}`)
+            router.push(`/login?error=${encodeURIComponent(exchangeError.message)}&next=${encodeURIComponent(next)}`)
           }, 2000)
           return
         }
@@ -60,7 +61,7 @@ function AuthCallbackContent() {
           setError('no_user')
           setStatus('error')
           setTimeout(() => {
-            router.push('/auth/login?error=no_user')
+            router.push(`/login?error=no_user&next=${encodeURIComponent(next)}`)
           }, 2000)
           return
         }
@@ -71,7 +72,7 @@ function AuthCallbackContent() {
         const { data: existingProfile, error: profileError } = await supabase
           .from('profiles')
           .select('id')
-          .eq('user_id', data.user.id)
+          .eq('id', data.user.id)
           .single()
 
         if (profileError && profileError.code !== 'PGRST116') {
@@ -83,10 +84,9 @@ function AuthCallbackContent() {
           const { error: insertError } = await supabase
             .from('profiles')
             .insert({
-              user_id: data.user.id,
-              full_name: data.user.user_metadata?.full_name || data.user.email?.split('@')[0],
-              username: data.user.user_metadata?.username || data.user.email?.split('@')[0],
-              avatar_url: data.user.user_metadata?.avatar_url,
+              id: data.user.id,
+              full_name: data.user.user_metadata?.full_name || data.user.email,
+              role: 'client',
             })
 
           if (insertError) {
@@ -97,16 +97,16 @@ function AuthCallbackContent() {
         }
 
         setStatus('success')
-        console.log('Redirecting to profile...')
+        console.log('Redirecting to:', next)
         setTimeout(() => {
-          router.push('/profile')
+          router.push(next)
         }, 500)
       } catch (error) {
         console.error('Unexpected error in callback:', error)
         setError('unexpected')
         setStatus('error')
         setTimeout(() => {
-          router.push('/auth/login?error=unexpected')
+          router.push(`/login?error=unexpected&next=${encodeURIComponent(next)}`)
         }, 2000)
       }
     }

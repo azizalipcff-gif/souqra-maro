@@ -1,20 +1,15 @@
 import { redirect } from "next/navigation"
-import { createClient } from "@supabase/supabase-js"
 import { Header } from "@/components/layout/header"
 import { Footer } from "@/components/layout/footer"
 import BusinessForm from "@/components/business/BusinessForm"
+import { getServerSession } from "@/lib/supabase/server"
 
 // Force dynamic rendering to avoid build-time environment variable issues
 export const dynamic = 'force-dynamic'
 
 // Server component to check authentication
 export default async function AddBusinessPage() {
-  const supabase = createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-  )
-
-  const { data: { session } } = await supabase.auth.getSession()
+  const session = await getServerSession()
 
   if (!session) {
     redirect("/login?next=/add-business")
