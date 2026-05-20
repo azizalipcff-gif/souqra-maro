@@ -16,7 +16,7 @@ function AuthCallbackContent() {
       const code = searchParams.get('code')
       const errorParam = searchParams.get('error')
       const errorDescription = searchParams.get('error_description')
-      const next = searchParams.get('next') || '/dashboard'
+      const next = searchParams.get('next') || '/profile'
 
       console.log('Callback params:', { code: code ? 'present' : 'missing', error: errorParam, errorDescription, next })
 
