@@ -98,12 +98,6 @@ export function Header() {
               Services
             </Link>
             <Link
-              href="/add-business"
-              className="text-foreground hover:text-royal-blue transition-colors font-medium"
-            >
-              Add Your Business
-            </Link>
-            <Link
               href="/categories"
               className="text-foreground hover:text-royal-blue transition-colors font-medium"
             >
@@ -177,14 +171,6 @@ export function Header() {
                           <User className="h-4 w-4 mr-2" />
                           Profile
                         </Link>
-                        <Link
-                          href="/add-business"
-                          className="flex items-center px-4 py-2 text-sm hover:bg-gray-100"
-                          onClick={() => setIsDropdownOpen(false)}
-                        >
-                          <ShoppingBag className="h-4 w-4 mr-2" />
-                          Add Business
-                        </Link>
                         <hr className="my-2" />
                         <button
                           onClick={() => {
@@ -248,12 +234,6 @@ export function Header() {
                 className="text-foreground hover:text-royal-blue transition-colors font-medium"
               >
                 Services
-              </Link>
-              <Link
-                href="/add-business"
-                className="text-foreground hover:text-royal-blue transition-colors font-medium"
-              >
-                Add Your Business
               </Link>
               <Link
                 href="/categories"

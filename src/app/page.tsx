@@ -151,9 +151,6 @@ export default function Home() {
             <div className="text-center py-12">
               <Store className="h-16 w-16 text-gray-300 mx-auto mb-4" />
               <p className="text-gray-500 mb-4">No featured businesses yet</p>
-              <Link href="/add-business">
-                <Button>Add Your Business</Button>
-              </Link>
             </div>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
@@ -229,12 +226,6 @@ export default function Home() {
               Join thousands of Moroccan sellers and businesses. Create your store and reach millions of customers.
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
-              <Link href="/add-business">
-                <Button size="lg" variant="gold" className="w-full sm:w-auto">
-                  <TrendingUp className="mr-2 h-5 w-5" />
-                  Add Your Business
-                </Button>
-              </Link>
               <Link href="/about">
                 <Button size="lg" variant="outline" className="w-full sm:w-auto border-white text-white hover:bg-white hover:text-royal-blue">
                   Learn More

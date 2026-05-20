@@ -237,9 +237,6 @@ export default function MarketplacePage() {
             <div className="text-center py-12">
               <Store className="h-16 w-16 text-gray-300 mx-auto mb-4" />
               <p className="text-gray-500 mb-4">No businesses found</p>
-              <Link href="/add-business">
-                <Button>Add Your Business</Button>
-              </Link>
             </div>
           ) : (
             <>

@@ -7,7 +7,7 @@ export async function middleware(request: NextRequest) {
   const pathname = requestUrl.pathname
 
   // Protected routes
-  const protectedRoutes = ['/add-business', '/dashboard']
+  const protectedRoutes = ['/dashboard']
   
   // Check if the current path is a protected route
   const isProtectedRoute = protectedRoutes.some(route => pathname.startsWith(route))
@@ -46,5 +46,5 @@ export async function middleware(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ['/add-business/:path*', '/dashboard/:path*'],
+  matcher: ['/dashboard/:path*'],
 }

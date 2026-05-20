@@ -364,12 +364,6 @@ export default function ProfilePage() {
                     </div>
 
                     <div className="space-y-2 w-full">
-                      <Link href="/add-business">
-                        <Button variant="outline" className="w-full justify-start">
-                          <ShoppingBag className="h-4 w-4 mr-2" />
-                          Add Business
-                        </Button>
-                      </Link>
                       <Button
                         variant="outline"
                         className="w-full justify-start"
@@ -566,21 +560,12 @@ export default function ProfilePage() {
               <Card>
                 <CardHeader className="flex flex-row items-center justify-between">
                   <CardTitle>My Businesses</CardTitle>
-                  <Link href="/add-business">
-                    <Button size="sm">
-                      <ShoppingBag className="h-4 w-4 mr-2" />
-                      Add Business
-                    </Button>
-                  </Link>
                 </CardHeader>
                 <CardContent>
                   {userBusinesses.length === 0 ? (
                     <div className="text-center py-8">
                       <ShoppingBag className="h-12 w-12 text-gray-300 mx-auto mb-4" />
                       <p className="text-gray-500 mb-4">You haven't added any businesses yet</p>
-                      <Link href="/add-business">
-                        <Button>Add Your First Business</Button>
-                      </Link>
                     </div>
                   ) : (
                     <div className="space-y-4">

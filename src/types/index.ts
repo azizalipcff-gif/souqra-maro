@@ -70,30 +70,6 @@ export interface Seller {
   updatedAt: Date
 }
 
-export interface Business {
-  id: string
-  name: string
-  description: string
-  images: string[]
-  category: string
-  location: string
-  whatsapp: string
-  phone?: string
-  website?: string
-  email?: string
-  socialMedia?: {
-    facebook?: string
-    instagram?: string
-    twitter?: string
-  }
-  rating: number
-  reviews: number
-  featured: boolean
-  verified: boolean
-  createdAt: Date
-  updatedAt: Date
-}
-
 export interface Order {
   id: string
   userId: string
@@ -127,7 +103,6 @@ export interface Review {
   userId: string
   productId?: string
   serviceId?: string
-  businessId?: string
   rating: number
   comment: string
   createdAt: Date
@@ -177,6 +152,5 @@ export interface Favorite {
   userId: string
   productId?: string
   serviceId?: string
-  businessId?: string
   createdAt: Date
 }
