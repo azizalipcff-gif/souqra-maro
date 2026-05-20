@@ -1,7 +1,7 @@
 "use client"
 
 import { useState } from "react"
-import { User, MapPin, Phone, Mail, Save, Loader2 } from "lucide-react"
+import { User, MapPin, Phone, Save, Loader2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -13,8 +13,20 @@ const MOROCCAN_CITIES = [
   "Kenitra", "Tetouan", "Safi", "Meknes", "El Jadida", "Beni Mellal", "Nador"
 ]
 
+interface Profile {
+  id?: string
+  full_name?: string | null
+  username?: string | null
+  phone?: string | null
+  city?: string | null
+  bio?: string | null
+  avatar_url?: string | null
+  email?: string | null
+  created_at?: string | null
+}
+
 interface EditProfileFormProps {
-  profile: any
+  profile: Profile
   onSave: (data: any) => Promise<void>
   onCancel: () => void
 }

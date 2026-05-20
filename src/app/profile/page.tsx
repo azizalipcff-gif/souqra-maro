@@ -10,13 +10,37 @@ import EditProfileForm from "@/components/profile/EditProfileForm"
 import AvatarUpload from "@/components/profile/AvatarUpload"
 import { getSupabase } from "@/lib/supabase/client"
 
+interface Profile {
+  id?: string
+  full_name?: string | null
+  username?: string | null
+  phone?: string | null
+  city?: string | null
+  bio?: string | null
+  avatar_url?: string | null
+  email?: string | null
+  created_at?: string | null
+}
+
+const DEFAULT_PROFILE: Profile = {
+  full_name: '',
+  username: '',
+  phone: '',
+  city: '',
+  bio: '',
+  avatar_url: null,
+  email: '',
+  created_at: null,
+}
+
 export default function ProfilePage() {
   const router = useRouter()
   const [isLoading, setIsLoading] = useState(true)
   const [isEditing, setIsEditing] = useState(false)
-  const [profile, setProfile] = useState<any>(null)
+  const [profile, setProfile] = useState<Profile>(DEFAULT_PROFILE)
   const [error, setError] = useState("")
   const [success, setSuccess] = useState("")
+  const [isAuthenticated, setIsAuthenticated] = useState(false)
 
   useEffect(() => {
     checkAuthAndLoadProfile()
@@ -25,52 +49,85 @@ export default function ProfilePage() {
   const checkAuthAndLoadProfile = async () => {
     try {
       const supabase = getSupabase()
-      const { data: { session } } = await supabase.auth.getSession()
-      if (!session) {
+      const { data } = await supabase.auth.getSession()
+      const session = data?.session
+      
+      if (!session?.user) {
+        setIsAuthenticated(false)
         router.push("/login?next=/profile")
         return
       }
 
-      await loadProfile()
+      setIsAuthenticated(true)
+      await loadProfile(session.user.id, session.user.email)
     } catch (error) {
       console.error('Auth check error:', error)
-      router.push("/login?next=/profile")
-    } finally {
+      setIsAuthenticated(false)
+      setError('Authentication error')
       setIsLoading(false)
     }
   }
 
-  const loadProfile = async () => {
+  const loadProfile = async (userId: string, userEmail?: string | null) => {
     try {
       const supabase = getSupabase()
-      const { data: { session } } = await supabase.auth.getSession()
-      if (!session) return
-
+      
       const { data, error } = await supabase
         .from('profiles')
         .select('*')
-        .eq('id', session.user.id)
+        .eq('id', userId)
         .single()
 
-      if (error) throw error
+      if (error) {
+        // If profile doesn't exist, create a default one
+        if (error.code === 'PGRST116') {
+          setProfile({
+            ...DEFAULT_PROFILE,
+            id: userId,
+            email: userEmail || '',
+          })
+          return
+        }
+        throw error
+      }
 
       if (data) {
         setProfile({
+          ...DEFAULT_PROFILE,
           ...data,
-          email: session.user.email,
+          email: userEmail || data.email || '',
+        })
+      } else {
+        setProfile({
+          ...DEFAULT_PROFILE,
+          id: userId,
+          email: userEmail || '',
         })
       }
     } catch (error) {
       console.error('Error loading profile:', error)
       setError('Failed to load profile')
+      // Don't crash, set default profile
+      setProfile({
+        ...DEFAULT_PROFILE,
+        id: userId,
+        email: userEmail || '',
+      })
+    } finally {
+      setIsLoading(false)
     }
   }
 
   const handleAvatarChange = async (url: string) => {
     try {
       const supabase = getSupabase()
-      const { data: { session } } = await supabase.auth.getSession()
-      if (!session) return
+      const { data } = await supabase.auth.getSession()
+      const session = data?.session
+      
+      if (!session?.user) {
+        setError('Not authenticated')
+        return
+      }
 
       const { error } = await supabase
         .from('profiles')
@@ -91,8 +148,13 @@ export default function ProfilePage() {
   const handleSaveProfile = async (formData: any) => {
     try {
       const supabase = getSupabase()
-      const { data: { session } } = await supabase.auth.getSession()
-      if (!session) return
+      const { data } = await supabase.auth.getSession()
+      const session = data?.session
+      
+      if (!session?.user) {
+        setError('Not authenticated')
+        return
+      }
 
       const { error } = await supabase
         .from('profiles')
@@ -107,6 +169,7 @@ export default function ProfilePage() {
       setTimeout(() => setSuccess(''), 3000)
     } catch (error) {
       console.error('Error updating profile:', error)
+      setError('Failed to update profile')
       throw error
     }
   }
@@ -118,6 +181,20 @@ export default function ProfilePage() {
         <div className="container mx-auto px-4 py-16">
           <div className="flex justify-center">
             <Loader2 className="h-8 w-8 animate-spin text-blue-600" />
+          </div>
+        </div>
+        <Footer />
+      </div>
+    )
+  }
+
+  if (!isAuthenticated) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-white via-blue-50 to-white">
+        <Header />
+        <div className="container mx-auto px-4 py-16">
+          <div className="text-center">
+            <p className="text-gray-600">Redirecting to login...</p>
           </div>
         </div>
         <Footer />

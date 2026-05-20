@@ -6,18 +6,32 @@ import { Card, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Edit2 } from "lucide-react"
 
+interface Profile {
+  id?: string
+  full_name?: string | null
+  username?: string | null
+  phone?: string | null
+  city?: string | null
+  bio?: string | null
+  avatar_url?: string | null
+  email?: string | null
+  created_at?: string | null
+}
+
 interface ProfileCardProps {
-  profile: any
+  profile: Profile
   onEdit: () => void
 }
 
 export default function ProfileCard({ profile, onEdit }: ProfileCardProps) {
-  const initials = profile.full_name
-    ?.split(' ')
-    .map((n: string) => n[0])
-    .join('')
-    .toUpperCase()
-    .substring(0, 2) || 'U'
+  const displayName = profile.full_name || 'Complete your profile'
+  const displayUsername = profile.username || '@username'
+  const displayEmail = profile.email || 'No email'
+  const displayCity = profile.city || 'Location not set'
+  const displayPhone = profile.phone || null
+  const displayBio = profile.bio || null
+  const displayAvatar = profile.avatar_url || null
+  const displayCreatedAt = profile.created_at ? new Date(profile.created_at).toLocaleDateString() : 'Recently'
 
   return (
     <Card className="overflow-hidden">
@@ -29,45 +43,43 @@ export default function ProfileCard({ profile, onEdit }: ProfileCardProps) {
         <div className="px-6 pb-6">
           <div className="relative -mt-16 mb-4">
             <Avatar 
-              src={profile.avatar_url} 
-              alt={profile.full_name}
+              src={displayAvatar || undefined}
+              alt={displayName}
               className="h-32 w-32 border-4 border-white shadow-lg"
             />
           </div>
 
           <div className="space-y-4">
             <div>
-              <h2 className="text-2xl font-bold text-gray-900">{profile.full_name}</h2>
-              <p className="text-gray-600">@{profile.username}</p>
+              <h2 className="text-2xl font-bold text-gray-900">{displayName}</h2>
+              <p className="text-gray-600">{displayUsername}</p>
             </div>
 
-            {profile.bio && (
-              <p className="text-gray-700">{profile.bio}</p>
+            {displayBio && (
+              <p className="text-gray-700">{displayBio}</p>
             )}
 
             <div className="space-y-2 pt-4 border-t">
-              {profile.phone && (
+              {displayPhone && (
                 <div className="flex items-center gap-2 text-sm text-gray-600">
                   <Phone className="h-4 w-4" />
-                  <span>{profile.phone}</span>
-                </div>
-              )}
-
-              {profile.city && (
-                <div className="flex items-center gap-2 text-sm text-gray-600">
-                  <MapPin className="h-4 w-4" />
-                  <span>{profile.city}</span>
+                  <span>{displayPhone}</span>
                 </div>
               )}
 
               <div className="flex items-center gap-2 text-sm text-gray-600">
+                <MapPin className="h-4 w-4" />
+                <span>{displayCity}</span>
+              </div>
+
+              <div className="flex items-center gap-2 text-sm text-gray-600">
                 <Mail className="h-4 w-4" />
-                <span>{profile.email}</span>
+                <span>{displayEmail}</span>
               </div>
 
               <div className="flex items-center gap-2 text-sm text-gray-600">
                 <Calendar className="h-4 w-4" />
-                <span>Joined {new Date(profile.created_at).toLocaleDateString()}</span>
+                <span>Joined {displayCreatedAt}</span>
               </div>
             </div>
 
