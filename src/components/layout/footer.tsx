@@ -1,7 +1,7 @@
 "use client"
 
 import Link from "next/link"
-import { Mail, Phone, MapPin } from "lucide-react"
+import { Mail, Phone, MapPin, User } from "lucide-react"
 import { motion } from "framer-motion"
 
 export function Footer() {
@@ -98,15 +98,19 @@ export function Footer() {
             <ul className="space-y-3">
               <li className="flex items-center space-x-2 text-gray-400">
                 <Mail className="h-4 w-4" />
-                <span>contact@souqora.ma</span>
+                <span>souqoramoroc@gmail.com</span>
               </li>
               <li className="flex items-center space-x-2 text-gray-400">
                 <Phone className="h-4 w-4" />
-                <span>+212 5XX XXX XXX</span>
+                <span>+212 0659785764</span>
               </li>
               <li className="flex items-center space-x-2 text-gray-400">
                 <MapPin className="h-4 w-4" />
-                <span>Casablanca, Morocco</span>
+                <span>Berkane, Morocco</span>
+              </li>
+              <li className="flex items-center space-x-2 text-gray-400">
+                <User className="h-4 w-4" />
+                <span>Founder: Aziz Ali</span>
               </li>
             </ul>
           </motion.div>
