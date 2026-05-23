@@ -2,12 +2,14 @@
 
 import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
-import { Loader2 } from "lucide-react"
+import { Loader2, TrendingUp, ArrowRight } from "lucide-react"
 import { Header } from "@/components/layout/header"
 import { Footer } from "@/components/layout/footer"
 import ProfileCard from "@/components/profile/ProfileCard"
 import EditProfileForm from "@/components/profile/EditProfileForm"
 import AvatarUpload from "@/components/profile/AvatarUpload"
+import { Button } from "@/components/ui/button"
+import { Card, CardContent } from "@/components/ui/card"
 import { getSupabase } from "@/lib/supabase/client"
 
 interface Profile {
@@ -234,10 +236,42 @@ export default function ProfilePage() {
               />
             </div>
           ) : (
-            <ProfileCard
-              profile={profile}
-              onEdit={() => setIsEditing(true)}
-            />
+            <>
+              <ProfileCard
+                profile={profile}
+                onEdit={() => setIsEditing(true)}
+              />
+              
+              {/* Start Your Business Journey Card */}
+              <Card className="mt-8 bg-gradient-to-br from-blue-600 to-blue-400 border-0 shadow-xl">
+                <CardContent className="p-8">
+                  <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
+                    <div className="flex-1">
+                      <div className="flex items-center gap-3 mb-3">
+                        <div className="w-12 h-12 bg-white/20 rounded-xl flex items-center justify-center">
+                          <TrendingUp className="h-6 w-6 text-white" />
+                        </div>
+                        <h2 className="text-2xl font-bold text-white">
+                          Start Your Business Journey
+                        </h2>
+                      </div>
+                      <p className="text-white/90 text-lg mb-6">
+                        List your business on SOUQORA and reach thousands of customers across Morocco. It's free, easy, and takes just a few minutes.
+                      </p>
+                      <Button 
+                        size="lg" 
+                        variant="default" 
+                        className="bg-white text-blue-600 hover:bg-gray-100"
+                        onClick={() => router.push('/add-business')}
+                      >
+                        Add Your Business
+                        <ArrowRight className="ml-2 h-5 w-5" />
+                      </Button>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            </>
           )}
         </div>
       </div>
