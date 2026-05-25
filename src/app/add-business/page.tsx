@@ -108,12 +108,15 @@ export default function AddBusinessPage() {
           city: formData.city,
           phone: formData.phone,
           description: formData.description,
-          approved: false
+          approved: true
         })
 
       if (insertError) throw insertError
 
       setIsSuccess(true)
+      setTimeout(() => {
+        router.push('/businesses')
+      }, 2000)
     } catch (error) {
       console.error('Error creating business:', error)
       setError("Failed to submit business. Please try again.")
