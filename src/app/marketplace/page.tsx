@@ -59,16 +59,8 @@ export default function MarketplacePage() {
     try {
       let query = getSupabase()
         .from('businesses')
-        .select(`
-          *,
-          business_images (
-            image_type,
-            image_url,
-            order_index
-          )
-        `)
+        .select('*')
         .eq('approved', true)
-        .eq('status', 'active')
 
       if (selectedCategory !== "All Categories") {
         query = query.eq('category', selectedCategory)
@@ -79,7 +71,7 @@ export default function MarketplacePage() {
       }
 
       if (searchQuery) {
-        query = query.ilike('name', `%${searchQuery}%`)
+        query = query.ilike('business_name', `%${searchQuery}%`)
       }
 
       const { data } = await query.order('created_at', { ascending: false })
@@ -249,7 +241,6 @@ export default function MarketplacePage() {
                 }
               >
                 {businesses.map((business, index) => {
-                  const coverImage = business.business_images?.find((img: any) => img.image_type === 'cover')
                   return (
                     <motion.div
                       key={business.id}
@@ -258,25 +249,12 @@ export default function MarketplacePage() {
                       transition={{ delay: index * 0.05 }}
                       whileHover={{ y: -5 }}
                     >
-                      <Link href={`/business/${business.slug}`}>
-                        <Card className="overflow-hidden hover:shadow-2xl transition-all duration-300 border-2 border-transparent hover:border-gold h-full">
+                      <Link href={`/business/${business.id}`}>
+                        <Card className="overflow-hidden hover:shadow-2xl transition-all duration-300 border-2 border-transparent hover:border-blue-300 h-full">
                           <div className="relative h-48 overflow-hidden">
-                            {coverImage ? (
-                              <img
-                                src={coverImage.image_url}
-                                alt={business.name}
-                                className="w-full h-full object-cover hover:scale-110 transition-transform duration-300"
-                              />
-                            ) : (
-                              <div className="w-full h-full bg-gradient-to-br from-royal-blue to-purple-600 flex items-center justify-center">
-                                <Store className="h-12 w-12 text-white/50" />
-                              </div>
-                            )}
-                            {business.featured && (
-                              <Badge className="absolute top-3 right-3" variant="gold">
-                                Featured
-                              </Badge>
-                            )}
+                            <div className="w-full h-full bg-gradient-to-br from-blue-600 to-blue-400 flex items-center justify-center">
+                              <Store className="h-12 w-12 text-white/50" />
+                            </div>
                           </div>
                           <CardHeader className="pb-3">
                             <div className="flex items-center gap-2 mb-2">
@@ -284,7 +262,7 @@ export default function MarketplacePage() {
                                 {business.category}
                               </Badge>
                             </div>
-                            <CardTitle className="text-lg line-clamp-2">{business.name}</CardTitle>
+                            <CardTitle className="text-lg line-clamp-2">{business.business_name}</CardTitle>
                             <div className="flex items-center gap-3 text-sm text-gray-500 mt-2">
                               <span className="flex items-center gap-1">
                                 <MapPin className="h-3 w-3" />
@@ -293,7 +271,7 @@ export default function MarketplacePage() {
                             </div>
                           </CardHeader>
                           <CardContent className="pb-3">
-                            <p className="text-sm text-gray-600 line-clamp-2">{business.short_description}</p>
+                            <p className="text-sm text-gray-600 line-clamp-2">{business.description}</p>
                           </CardContent>
                           <CardFooter className="flex gap-2">
                             <Button className="flex-1">View Details</Button>
