@@ -252,12 +252,31 @@ export default function MarketplacePage() {
                       <Link href={`/business/${business.id}`}>
                         <Card className="overflow-hidden hover:shadow-2xl transition-all duration-300 border-2 border-transparent hover:border-blue-300 h-full">
                           <div className="relative h-48 overflow-hidden">
-                            <div className="w-full h-full bg-gradient-to-br from-blue-600 to-blue-400 flex items-center justify-center">
-                              <Store className="h-12 w-12 text-white/50" />
-                            </div>
+                            {business.cover_url ? (
+                              <img
+                                src={business.cover_url}
+                                alt={business.business_name}
+                                className="w-full h-full object-cover hover:scale-110 transition-transform duration-300"
+                              />
+                            ) : (
+                              <div className="w-full h-full bg-gradient-to-br from-blue-600 to-blue-400 flex items-center justify-center">
+                                <Store className="h-12 w-12 text-white/50" />
+                              </div>
+                            )}
                           </div>
                           <CardHeader className="pb-3">
-                            <div className="flex items-center gap-2 mb-2">
+                            <div className="flex items-center gap-3 mb-2">
+                              {business.logo_url ? (
+                                <img
+                                  src={business.logo_url}
+                                  alt={business.business_name}
+                                  className="w-12 h-12 object-contain rounded-lg border border-gray-200"
+                                />
+                              ) : (
+                                <div className="w-12 h-12 bg-gradient-to-br from-blue-600 to-blue-400 rounded-lg flex items-center justify-center">
+                                  <Store className="h-6 w-6 text-white/50" />
+                                </div>
+                              )}
                               <Badge variant="outline" className="text-xs">
                                 {business.category}
                               </Badge>

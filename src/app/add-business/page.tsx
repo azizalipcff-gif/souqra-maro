@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
-import { Loader2, Building2, MapPin, Phone, FileText, CheckCircle } from "lucide-react"
+import { Loader2, Building2, MapPin, Phone, FileText, CheckCircle, Upload, X, Image as ImageIcon } from "lucide-react"
 import { Header } from "@/components/layout/header"
 import { Footer } from "@/components/layout/footer"
 import { Button } from "@/components/ui/button"
@@ -12,6 +12,7 @@ import { Textarea } from "@/components/ui/textarea"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Card, CardContent } from "@/components/ui/card"
 import { getSupabase } from "@/lib/supabase/client"
+import { uploadBusinessImage } from "@/lib/utils/image-upload"
 
 const BUSINESS_CATEGORIES = [
   "Restaurants",
@@ -52,6 +53,13 @@ export default function AddBusinessPage() {
     description: ""
   })
 
+  const [logoFile, setLogoFile] = useState<File | null>(null)
+  const [coverFile, setCoverFile] = useState<File | null>(null)
+  const [logoPreview, setLogoPreview] = useState<string | null>(null)
+  const [coverPreview, setCoverPreview] = useState<string | null>(null)
+  const [uploadProgress, setUploadProgress] = useState<{ logo: number, cover: number }>({ logo: 0, cover: 0 })
+  const [uploadError, setUploadError] = useState("")
+
   useEffect(() => {
     checkAuth()
   }, [])
@@ -79,9 +87,76 @@ export default function AddBusinessPage() {
     }
   }
 
+  const handleLogoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+
+    // Validate file type
+    const allowedTypes = ["image/jpeg", "image/jpg", "image/png", "image/webp"]
+    if (!allowedTypes.includes(file.type)) {
+      setUploadError("Invalid file type. Only JPG, JPEG, PNG, and WebP are allowed.")
+      return
+    }
+
+    // Validate file size (5MB)
+    if (file.size > 5 * 1024 * 1024) {
+      setUploadError("File size exceeds 5MB limit.")
+      return
+    }
+
+    setUploadError("")
+    setLogoFile(file)
+    
+    // Create preview
+    const reader = new FileReader()
+    reader.onloadend = () => {
+      setLogoPreview(reader.result as string)
+    }
+    reader.readAsDataURL(file)
+  }
+
+  const handleCoverChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+
+    // Validate file type
+    const allowedTypes = ["image/jpeg", "image/jpg", "image/png", "image/webp"]
+    if (!allowedTypes.includes(file.type)) {
+      setUploadError("Invalid file type. Only JPG, JPEG, PNG, and WebP are allowed.")
+      return
+    }
+
+    // Validate file size (5MB)
+    if (file.size > 5 * 1024 * 1024) {
+      setUploadError("File size exceeds 5MB limit.")
+      return
+    }
+
+    setUploadError("")
+    setCoverFile(file)
+    
+    // Create preview
+    const reader = new FileReader()
+    reader.onloadend = () => {
+      setCoverPreview(reader.result as string)
+    }
+    reader.readAsDataURL(file)
+  }
+
+  const removeLogo = () => {
+    setLogoFile(null)
+    setLogoPreview(null)
+  }
+
+  const removeCover = () => {
+    setCoverFile(null)
+    setCoverPreview(null)
+  }
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setError("")
+    setUploadError("")
 
     // Validate required fields
     if (!formData.business_name || !formData.category || !formData.city || !formData.phone || !formData.description) {
@@ -99,7 +174,8 @@ export default function AddBusinessPage() {
     try {
       const supabase = getSupabase()
 
-      const { error: insertError } = await supabase
+      // First, create the business record to get the ID
+      const { data: businessData, error: insertError } = await supabase
         .from('businesses')
         .insert({
           user_id: userId,
@@ -110,8 +186,50 @@ export default function AddBusinessPage() {
           description: formData.description,
           approved: true
         })
+        .select()
+        .single()
 
       if (insertError) throw insertError
+
+      const businessId = businessData.id
+
+      // Upload logo if provided
+      let logoUrl = null
+      if (logoFile) {
+        try {
+          const logoResult = await uploadBusinessImage(logoFile, "logo", businessId)
+          logoUrl = logoResult.url
+        } catch (error) {
+          console.error('Logo upload error:', error)
+          setUploadError("Failed to upload logo. Business created without logo.")
+        }
+      }
+
+      // Upload cover if provided
+      let coverUrl = null
+      if (coverFile) {
+        try {
+          const coverResult = await uploadBusinessImage(coverFile, "cover", businessId)
+          coverUrl = coverResult.url
+        } catch (error) {
+          console.error('Cover upload error:', error)
+          setUploadError("Failed to upload cover image. Business created without cover.")
+        }
+      }
+
+      // Update business with image URLs
+      if (logoUrl || coverUrl) {
+        const updateData: any = {}
+        if (logoUrl) updateData.logo_url = logoUrl
+        if (coverUrl) updateData.cover_url = coverUrl
+
+        const { error: updateError } = await supabase
+          .from('businesses')
+          .update(updateData)
+          .eq('id', businessId)
+
+        if (updateError) throw updateError
+      }
 
       setIsSuccess(true)
       setTimeout(() => {
@@ -206,6 +324,12 @@ export default function AddBusinessPage() {
                   </div>
                 )}
 
+                {uploadError && (
+                  <div className="p-4 bg-red-50 border border-red-200 rounded-lg">
+                    <p className="text-sm text-red-800">{uploadError}</p>
+                  </div>
+                )}
+
                 <div>
                   <Label htmlFor="business_name">Business Name *</Label>
                   <div className="relative">
@@ -285,6 +409,90 @@ export default function AddBusinessPage() {
                       required
                     />
                   </div>
+                </div>
+
+                {/* Logo Upload */}
+                <div>
+                  <Label>Business Logo (Optional)</Label>
+                  <p className="text-sm text-gray-500 mb-2">Upload your business logo. JPG, JPEG, PNG, or WebP. Max 5MB.</p>
+                  
+                  {logoPreview ? (
+                    <div className="relative mt-2">
+                      <img
+                        src={logoPreview}
+                        alt="Logo preview"
+                        className="w-32 h-32 object-contain border-2 border-gray-200 rounded-lg"
+                      />
+                      <Button
+                        type="button"
+                        variant="danger"
+                        size="icon"
+                        className="absolute -top-2 -right-2 h-6 w-6"
+                        onClick={removeLogo}
+                      >
+                        <X className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  ) : (
+                    <div className="mt-2">
+                      <label htmlFor="logo-upload" className="cursor-pointer">
+                        <div className="border-2 border-dashed border-gray-300 rounded-lg p-8 text-center hover:border-blue-400 transition-colors">
+                          <ImageIcon className="h-8 w-8 text-gray-400 mx-auto mb-2" />
+                          <p className="text-sm text-gray-600">Click to upload logo</p>
+                          <p className="text-xs text-gray-400 mt-1">JPG, JPEG, PNG, WebP (max 5MB)</p>
+                        </div>
+                      </label>
+                      <input
+                        id="logo-upload"
+                        type="file"
+                        accept="image/jpeg,image/jpg,image/png,image/webp"
+                        onChange={handleLogoChange}
+                        className="hidden"
+                      />
+                    </div>
+                  )}
+                </div>
+
+                {/* Cover Upload */}
+                <div>
+                  <Label>Cover Image (Optional)</Label>
+                  <p className="text-sm text-gray-500 mb-2">Upload a cover image for your business. JPG, JPEG, PNG, or WebP. Max 5MB.</p>
+                  
+                  {coverPreview ? (
+                    <div className="relative mt-2">
+                      <img
+                        src={coverPreview}
+                        alt="Cover preview"
+                        className="w-full h-48 object-cover border-2 border-gray-200 rounded-lg"
+                      />
+                      <Button
+                        type="button"
+                        variant="danger"
+                        size="icon"
+                        className="absolute top-2 right-2"
+                        onClick={removeCover}
+                      >
+                        <X className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  ) : (
+                    <div className="mt-2">
+                      <label htmlFor="cover-upload" className="cursor-pointer">
+                        <div className="border-2 border-dashed border-gray-300 rounded-lg p-8 text-center hover:border-blue-400 transition-colors">
+                          <ImageIcon className="h-8 w-8 text-gray-400 mx-auto mb-2" />
+                          <p className="text-sm text-gray-600">Click to upload cover image</p>
+                          <p className="text-xs text-gray-400 mt-1">JPG, JPEG, PNG, WebP (max 5MB)</p>
+                        </div>
+                      </label>
+                      <input
+                        id="cover-upload"
+                        type="file"
+                        accept="image/jpeg,image/jpg,image/png,image/webp"
+                        onChange={handleCoverChange}
+                        className="hidden"
+                      />
+                    </div>
+                  )}
                 </div>
 
                 <Button 
