@@ -33,21 +33,36 @@ export default function BusinessDetailPage({ params }: { params: { id: string } 
 
   const loadBusiness = async () => {
     try {
+      console.log('Loading business with ID:', params.id)
       const supabase = getSupabase()
       
       const { data, error } = await supabase
         .from('businesses')
         .select('*')
         .eq('id', params.id)
-        .single()
+        .maybeSingle()
 
-      if (error) throw error
-
-      if (data) {
-        setBusiness(data)
-      } else {
-        setError('Business not found')
+      if (error) {
+        console.error('Supabase error:', error)
+        throw error
       }
+
+      console.log('Business data:', data)
+
+      if (!data) {
+        console.log('No business found with ID:', params.id)
+        setError('Business not found')
+        return
+      }
+
+      // Check if business is approved
+      if (!data.approved) {
+        console.log('Business not approved:', params.id)
+        setError('Business not found')
+        return
+      }
+
+      setBusiness(data)
     } catch (error) {
       console.error('Error loading business:', error)
       setError('Failed to load business')
