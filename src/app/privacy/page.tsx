@@ -159,7 +159,7 @@ export default function PrivacyPage() {
                     </p>
                     <div className="bg-blue-50 p-6 rounded-lg">
                       <p className="text-gray-700 mb-2"><strong>Email:</strong> souqoramoroc@gmail.com</p>
-                      <p className="text-gray-700 mb-2"><strong>Phone:</strong> +212 6 XX XX XX XX</p>
+                      <p className="text-gray-700 mb-2"><strong>Phone:</strong> +212 6 59 78 54 64</p>
                       <p className="text-gray-700"><strong>Location:</strong> Berkane, Morocco</p>
                     </div>
                   </section>

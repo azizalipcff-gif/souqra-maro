@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { useRouter } from "next/navigation"
+import { useRouter, useParams } from "next/navigation"
 import { Loader2, Building2, MapPin, Phone, FileText, ArrowLeft } from "lucide-react"
 import { Header } from "@/components/layout/header"
 import { Footer } from "@/components/layout/footer"
@@ -21,52 +21,81 @@ interface Business {
   created_at?: string
 }
 
-export default function BusinessDetailPage({ params }: { params: { id: string } }) {
+export default function BusinessDetailPage() {
   const router = useRouter()
+  const params = useParams()
+  const id = params.id as string
+  
   const [isLoading, setIsLoading] = useState(true)
   const [business, setBusiness] = useState<Business | null>(null)
   const [error, setError] = useState("")
 
   useEffect(() => {
     loadBusiness()
-  }, [params.id])
+  }, [id])
 
   const loadBusiness = async () => {
     try {
-      console.log('Loading business with ID:', params.id)
+      console.log("=== BUSINESS DETAILS DEBUG ===")
+      console.log("Route ID:", id)
+      console.log("ID type:", typeof id)
+      console.log("ID length:", id.length)
+      
       const supabase = getSupabase()
       
+      console.log("Executing Supabase query...")
       const { data, error } = await supabase
         .from('businesses')
         .select('*')
-        .eq('id', params.id)
+        .eq('id', id)
         .maybeSingle()
 
+      console.log("Business Query Result:", data)
+      console.log("Business Query Error:", error)
+
       if (error) {
-        console.error('Supabase error:', error)
+        console.error('Supabase error details:', {
+          message: error.message,
+          code: error.code,
+          details: error.details,
+          hint: error.hint
+        })
         throw error
       }
 
-      console.log('Business data:', data)
-
       if (!data) {
-        console.log('No business found with ID:', params.id)
+        console.log('No business found with ID:', id)
+        
+        // Try to fetch all businesses to see if any exist
+        const { data: allBusinesses, error: allError } = await supabase
+          .from('businesses')
+          .select('id, business_name, approved')
+          .limit(5)
+        
+        console.log('Sample businesses in database:', allBusinesses)
+        console.log('Sample businesses error:', allError)
+        
         setError('Business not found')
+        setIsLoading(false)
         return
       }
 
+      console.log('Business found:', data)
+      console.log('Business approved status:', data.approved)
+
       // Check if business is approved
       if (!data.approved) {
-        console.log('Business not approved:', params.id)
+        console.log('Business not approved:', id)
         setError('Business not found')
+        setIsLoading(false)
         return
       }
 
       setBusiness(data)
+      setIsLoading(false)
     } catch (error) {
       console.error('Error loading business:', error)
       setError('Failed to load business')
-    } finally {
       setIsLoading(false)
     }
   }
