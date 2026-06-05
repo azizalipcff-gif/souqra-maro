@@ -184,7 +184,7 @@ export default function AddBusinessPage() {
           city: formData.city,
           phone: formData.phone,
           description: formData.description,
-          approved: true
+          approved: false
         })
         .select()
         .single()
