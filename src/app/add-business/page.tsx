@@ -66,11 +66,17 @@ export default function AddBusinessPage() {
 
   const checkAuth = async () => {
     try {
+      console.log("=== ADD BUSINESS AUTH CHECK ===")
       const supabase = getSupabase()
       const { data } = await supabase.auth.getSession()
       const session = data?.session
       
+      console.log("Session:", session)
+      console.log("Session user:", session?.user)
+      console.log("User ID:", session?.user?.id)
+      
       if (!session?.user) {
+        console.log("No authenticated user found")
         setIsAuthenticated(false)
         router.push("/login?next=/add-business")
         return
@@ -78,6 +84,7 @@ export default function AddBusinessPage() {
 
       setIsAuthenticated(true)
       setUserId(session.user.id)
+      console.log("User ID set to:", session.user.id)
     } catch (error) {
       console.error('Auth check error:', error)
       setIsAuthenticated(false)
@@ -158,6 +165,11 @@ export default function AddBusinessPage() {
     setError("")
     setUploadError("")
 
+    console.log("=== ADD BUSINESS SUBMISSION DEBUG ===")
+    console.log("Current authenticated user ID:", userId)
+    console.log("User ID type:", typeof userId)
+    console.log("Form data:", formData)
+
     // Validate required fields
     if (!formData.business_name || !formData.category || !formData.city || !formData.phone || !formData.description) {
       setError("Please fill in all required fields")
@@ -174,24 +186,45 @@ export default function AddBusinessPage() {
     try {
       const supabase = getSupabase()
 
+      // Check current session
+      const { data: { session } } = await supabase.auth.getSession()
+      console.log("Current session:", session)
+      console.log("Session user:", session?.user)
+
+      const payload = {
+        user_id: userId,
+        business_name: formData.business_name,
+        category: formData.category,
+        city: formData.city,
+        phone: formData.phone,
+        description: formData.description,
+        approved: false
+      }
+      console.log("Payload to insert:", payload)
+
       // First, create the business record to get the ID
+      console.log("Executing Supabase insert...")
       const { data: businessData, error: insertError } = await supabase
         .from('businesses')
-        .insert({
-          user_id: userId,
-          business_name: formData.business_name,
-          category: formData.category,
-          city: formData.city,
-          phone: formData.phone,
-          description: formData.description,
-          approved: false
-        })
+        .insert(payload)
         .select()
         .single()
 
-      if (insertError) throw insertError
+      console.log("Supabase insert result:", businessData)
+      console.log("Supabase insert error:", insertError)
+
+      if (insertError) {
+        console.error("Insert error details:", {
+          message: insertError.message,
+          code: insertError.code,
+          details: insertError.details,
+          hint: insertError.hint
+        })
+        throw insertError
+      }
 
       const businessId = businessData.id
+      console.log("Business ID after insert:", businessId)
 
       // Upload logo if provided
       let logoUrl = null
