@@ -161,6 +161,7 @@ export default function AddBusinessPage() {
   }
 
   const handleSubmit = async (e: React.FormEvent) => {
+    console.log("🔥🔥🔥 handleSubmit TRIGGERED 🔥🔥🔥")
     e.preventDefault()
     setError("")
     setUploadError("")
@@ -543,6 +544,11 @@ export default function AddBusinessPage() {
                   type="submit" 
                   className="w-full bg-blue-600 hover:bg-blue-700"
                   disabled={isSubmitting}
+                  onClick={(e) => {
+                    console.log("🔥 BUTTON CLICKED 🔥")
+                    console.log("isSubmitting:", isSubmitting)
+                    console.log("Button disabled:", isSubmitting)
+                  }}
                 >
                   {isSubmitting ? (
                     <>
