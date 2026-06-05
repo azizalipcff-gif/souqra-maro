@@ -166,8 +166,10 @@ export default function AddBusinessPage() {
     setUploadError("")
 
     console.log("=== ADD BUSINESS SUBMISSION DEBUG ===")
-    console.log("Current authenticated user ID:", userId)
-    console.log("User ID type:", typeof userId)
+    console.log("Current userId state:", userId)
+    console.log("userId type:", typeof userId)
+    console.log("userId is null:", userId === null)
+    console.log("userId is undefined:", userId === undefined)
     console.log("Form data:", formData)
 
     // Validate required fields
@@ -177,6 +179,7 @@ export default function AddBusinessPage() {
     }
 
     if (!userId) {
+      console.log("❌ userId is null/undefined - Cannot submit")
       setError("Authentication error. Please log in again.")
       return
     }
@@ -188,8 +191,12 @@ export default function AddBusinessPage() {
 
       // Check current session
       const { data: { session } } = await supabase.auth.getSession()
-      console.log("Current session:", session)
+      console.log("=== SESSION DEBUG ===")
+      console.log("Session exists:", !!session)
+      console.log("Session:", session)
       console.log("Session user:", session?.user)
+      console.log("Session user ID:", session?.user?.id)
+      console.log("auth.uid() would return:", session?.user?.id)
 
       const payload = {
         user_id: userId,
@@ -200,31 +207,35 @@ export default function AddBusinessPage() {
         description: formData.description,
         approved: false
       }
-      console.log("Payload to insert:", payload)
+      console.log("=== PAYLOAD DEBUG ===")
+      console.log("Payload:", payload)
+      console.log("Payload user_id:", payload.user_id)
+      console.log("Payload user_id type:", typeof payload.user_id)
 
       // First, create the business record to get the ID
-      console.log("Executing Supabase insert...")
+      console.log("=== SUPABASE INSERT DEBUG ===")
+      console.log("Executing insert query...")
       const { data: businessData, error: insertError } = await supabase
         .from('businesses')
         .insert(payload)
         .select()
         .single()
 
-      console.log("Supabase insert result:", businessData)
-      console.log("Supabase insert error:", insertError)
+      console.log("Insert result:", businessData)
+      console.log("Insert error:", insertError)
 
       if (insertError) {
-        console.error("Insert error details:", {
-          message: insertError.message,
-          code: insertError.code,
-          details: insertError.details,
-          hint: insertError.hint
-        })
+        console.error("=== INSERT ERROR DETAILS ===")
+        console.error("Error message:", insertError.message)
+        console.error("Error code:", insertError.code)
+        console.error("Error details:", insertError.details)
+        console.error("Error hint:", insertError.hint)
+        console.error("Full error object:", insertError)
         throw insertError
       }
 
       const businessId = businessData.id
-      console.log("Business ID after insert:", businessId)
+      console.log("✅ Business inserted successfully with ID:", businessId)
 
       // Upload logo if provided
       let logoUrl = null
