@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { supabase, createServiceClient } from '@/lib/supabase/server'
+import { createRouteHandlerClient, createServiceClient } from '@/lib/supabase/server'
 
 export async function GET(request: NextRequest) {
   try {
@@ -10,6 +10,7 @@ export async function GET(request: NextRequest) {
     }
 
     const token = authHeader.replace('Bearer ', '')
+    const supabase = createRouteHandlerClient(request)
     const { data: { user }, error: userError } = await supabase.auth.getUser(token)
 
     if (userError || !user) {
@@ -41,6 +42,7 @@ export async function POST(request: NextRequest) {
     }
 
     const token = authHeader.replace('Bearer ', '')
+    const supabase = createRouteHandlerClient(request)
     const { data: { user }, error: userError } = await supabase.auth.getUser(token)
 
     if (userError || !user) {
@@ -87,6 +89,7 @@ export async function PUT(request: NextRequest) {
     }
 
     const token = authHeader.replace('Bearer ', '')
+    const supabase = createRouteHandlerClient(request)
     const { data: { user }, error: userError } = await supabase.auth.getUser(token)
 
     if (userError || !user) {

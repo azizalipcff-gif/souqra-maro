@@ -1,4 +1,4 @@
-import { supabase, createServiceClient } from '@/lib/supabase/server'
+import { createRouteHandlerClient, createServiceClient } from '@/lib/supabase/server'
 import { NextResponse } from 'next/server'
 
 export async function POST(request: Request) {
@@ -10,6 +10,7 @@ export async function POST(request: Request) {
     }
 
     const token = authHeader.replace('Bearer ', '')
+    const supabase = createRouteHandlerClient(request)
     const { data: { user }, error: userError } = await supabase.auth.getUser(token)
 
     if (userError || !user) {
