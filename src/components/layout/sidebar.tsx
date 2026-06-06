@@ -7,21 +7,15 @@ import {
   LayoutDashboard,
   Package,
   ShoppingBag,
-  Users,
-  Settings,
   BarChart3,
   Heart,
   MessageSquare,
-  FileText,
+  Settings,
   LogOut,
 } from "lucide-react"
 import { cn } from "@/lib/utils"
 
-interface SidebarProps {
-  userRole: "seller" | "admin"
-}
-
-const sellerNavItems = [
+const navItems = [
   { href: "/dashboard", icon: LayoutDashboard, label: "Dashboard" },
   { href: "/dashboard/products", icon: Package, label: "Products" },
   { href: "/dashboard/orders", icon: ShoppingBag, label: "Orders" },
@@ -31,19 +25,8 @@ const sellerNavItems = [
   { href: "/dashboard/settings", icon: Settings, label: "Settings" },
 ]
 
-const adminNavItems = [
-  { href: "/admin", icon: LayoutDashboard, label: "Dashboard" },
-  { href: "/admin/users", icon: Users, label: "Users" },
-  { href: "/admin/products", icon: Package, label: "Products" },
-  { href: "/admin/services", icon: ShoppingBag, label: "Services" },
-  { href: "/admin/reports", icon: FileText, label: "Reports" },
-  { href: "/admin/analytics", icon: BarChart3, label: "Analytics" },
-  { href: "/admin/settings", icon: Settings, label: "Settings" },
-]
-
-export function Sidebar({ userRole }: SidebarProps) {
+export function Sidebar() {
   const pathname = usePathname()
-  const navItems = userRole === "admin" ? adminNavItems : sellerNavItems
 
   return (
     <aside className="w-64 glass border-r border-white/20 min-h-screen p-4">
