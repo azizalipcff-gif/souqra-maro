@@ -49,9 +49,9 @@ export async function POST(request: Request) {
     
     const { data: profile, error: profileError } = await supabase
       .from('profiles')
-      .select('*')
+      .select('id, full_name, role, created_at')
       .eq('id', user.id)
-      .single()
+      .maybeSingle()
 
     console.log("PROFILE DATA:", profile)
     console.log("PROFILE ERROR:", profileError)

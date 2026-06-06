@@ -32,8 +32,6 @@ export default function Home() {
           )
         `)
         .eq('approved', true)
-        .eq('status', 'active')
-        .eq('featured', true)
         .order('created_at', { ascending: false })
         .limit(8)
 
@@ -165,13 +163,13 @@ export default function Home() {
                     transition={{ delay: index * 0.1 }}
                     whileHover={{ y: -10 }}
                   >
-                    <Link href={`/business/${business.slug}`}>
+                    <Link href={`/business/${business.id}`}>
                       <Card className="overflow-hidden hover:shadow-2xl transition-all duration-300 border-2 border-transparent hover:border-gold">
                         <div className="relative h-48 overflow-hidden">
                           {coverImage ? (
                             <img
                               src={coverImage.image_url}
-                              alt={business.name}
+                              alt={business.business_name}
                               className="w-full h-full object-cover hover:scale-110 transition-transform duration-300"
                             />
                           ) : (
@@ -179,14 +177,9 @@ export default function Home() {
                               <Store className="h-12 w-12 text-white/50" />
                             </div>
                           )}
-                          {business.featured && (
-                            <Badge className="absolute top-3 right-3" variant="gold">
-                              Featured
-                            </Badge>
-                          )}
                         </div>
                         <CardHeader className="pb-3">
-                          <CardTitle className="text-lg line-clamp-1">{business.name}</CardTitle>
+                          <CardTitle className="text-lg line-clamp-1">{business.business_name}</CardTitle>
                           <div className="flex items-center gap-2 text-sm text-gray-500">
                             <span>{business.city}</span>
                             <span>•</span>
@@ -194,7 +187,7 @@ export default function Home() {
                           </div>
                         </CardHeader>
                         <CardContent className="pb-3">
-                          <p className="text-sm text-gray-600 line-clamp-2">{business.short_description}</p>
+                          <p className="text-sm text-gray-600 line-clamp-2">{business.description}</p>
                         </CardContent>
                         <CardFooter>
                           <Button className="w-full" variant="outline">

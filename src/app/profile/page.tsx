@@ -76,9 +76,9 @@ export default function ProfilePage() {
       
       const { data, error } = await supabase
         .from('profiles')
-        .select('*')
+        .select('id, full_name, role, created_at')
         .eq('id', userId)
-        .single()
+        .maybeSingle()
 
       if (error) {
         // If profile doesn't exist, create a default one
@@ -86,7 +86,6 @@ export default function ProfilePage() {
           setProfile({
             ...DEFAULT_PROFILE,
             id: userId,
-            email: userEmail || '',
           })
           return
         }
@@ -97,13 +96,11 @@ export default function ProfilePage() {
         setProfile({
           ...DEFAULT_PROFILE,
           ...data,
-          email: userEmail || data.email || '',
         })
       } else {
         setProfile({
           ...DEFAULT_PROFILE,
           id: userId,
-          email: userEmail || '',
         })
       }
     } catch (error) {
@@ -113,7 +110,6 @@ export default function ProfilePage() {
       setProfile({
         ...DEFAULT_PROFILE,
         id: userId,
-        email: userEmail || '',
       })
     } finally {
       setIsLoading(false)
