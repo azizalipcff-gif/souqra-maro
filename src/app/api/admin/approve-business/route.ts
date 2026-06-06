@@ -1,109 +1,51 @@
-import { createRouteHandlerClient, createAdminClient } from '@/lib/supabase/server'
+import { supabase, createServiceClient } from '@/lib/supabase/server'
 import { NextResponse } from 'next/server'
 
 export async function POST(request: Request) {
   try {
-    console.log("=== ADMIN APPROVE BUSINESS API DEBUG ===")
-    
     const authHeader = request.headers.get('authorization')
-    const cookieHeader = request.headers.get('cookie')
-    console.log("AUTH HEADER:", authHeader ? "PRESENT" : "NOT PRESENT")
-    console.log("COOKIE HEADER:", cookieHeader ? "PRESENT" : "NOT PRESENT")
     
-    if (!authHeader && !cookieHeader) {
-      console.log("❌ No authorization header or cookie")
+    if (!authHeader) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    const supabase = createRouteHandlerClient(request)
-    
-    console.log("USER AUTHENTICATION START")
-    
-    let user = null
-    let userError = null
-    
-    const { data: { session }, error: sessionError } = await supabase.auth.getSession()
-    console.log("SESSION:", session ? "PRESENT" : "NOT PRESENT")
-    console.log("SESSION ERROR:", sessionError)
-    
-    if (session?.user) {
-      user = session.user
-    } else if (authHeader) {
-      const token = authHeader.replace('Bearer ', '')
-      console.log("TOKEN:", token.substring(0, 20) + "...")
-      const { data: { user: tokenUser }, error: tokenError } = await supabase.auth.getUser(token)
-      console.log("TOKEN USER:", tokenUser ? "PRESENT" : "NOT PRESENT")
-      console.log("TOKEN ERROR:", tokenError)
-      user = tokenUser
-      userError = tokenError
-    }
-    
-    console.log("USER ID:", user?.id)
-    console.log("USER EMAIL:", user?.email)
-    console.log("AUTH ERROR:", userError)
-    
+    const token = authHeader.replace('Bearer ', '')
+    const { data: { user }, error: userError } = await supabase.auth.getUser(token)
+
     if (userError || !user) {
-      console.log("❌ User authentication failed")
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    // Use service role key to bypass RLS for profile query
-    const adminSupabase = createAdminClient()
+    // Use service client to bypass RLS for profile query
+    const serviceSupabase = createServiceClient()
 
-    // Check if user is admin
-    console.log("PROFILE QUERY START")
-    console.log("Querying profiles table for user ID:", user.id)
-    
-    const { data: profile, error: profileError } = await adminSupabase
+    const { data: profile } = await serviceSupabase
       .from('profiles')
       .select('id, full_name, role, created_at')
       .eq('id', user.id)
       .maybeSingle()
 
-    console.log("PROFILE DATA:", profile ? "FOUND" : "NOT FOUND")
-    console.log("PROFILE ERROR:", profileError)
-    
-    if (profileError) {
-      console.error("❌ Profile query error:", profileError)
-      console.error("Error code:", profileError.code)
-      console.error("Error message:", profileError.message)
-      return NextResponse.json({ error: 'Failed to query profile' }, { status: 500 })
+    if (!profile || profile.role !== 'admin') {
+      return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
     }
 
-    console.log("PROFILE ROLE:", profile?.role)
-    console.log("IS ADMIN:", profile?.role === "admin")
-
-    if (!profile || profile?.role !== 'admin') {
-      console.log("❌ Admin access denied")
-      return NextResponse.json({ error: 'Forbidden - Admin access required' }, { status: 403 })
-    }
-
-    console.log("✅ Admin access granted")
-
-    // Get business ID from request
     const { businessId } = await request.json()
-
+    
     if (!businessId) {
       return NextResponse.json({ error: 'Business ID is required' }, { status: 400 })
     }
 
-    // Approve business
-    const { error: updateError } = await adminSupabase
+    const { error } = await serviceSupabase
       .from('businesses')
       .update({ approved: true })
       .eq('id', businessId)
 
-    if (updateError) {
-      console.error('Error approving business:', updateError)
+    if (error) {
       return NextResponse.json({ error: 'Failed to approve business' }, { status: 500 })
     }
 
-    return NextResponse.json({ success: true, message: 'Business approved successfully' })
+    return NextResponse.json({ success: true })
   } catch (error) {
-    console.error('Server error:', error)
-    return NextResponse.json({ 
-      error: 'Internal server error', 
-      details: (error as any)?.message 
-    }, { status: 500 })
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
   }
 }

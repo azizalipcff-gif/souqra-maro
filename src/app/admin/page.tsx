@@ -28,24 +28,16 @@ export default function AdminDashboardPage() {
 
   const checkAdminAccess = async () => {
     try {
-      console.log("=== ADMIN DASHBOARD AUTH CHECK ===")
       const supabase = getSupabase()
       const { data: { session } } = await supabase.auth.getSession()
       
-      console.log("SESSION USER:", session?.user?.id)
-      console.log("SESSION EMAIL:", session?.user?.email)
-      console.log("SESSION EXISTS:", !!session)
-      
       if (!session?.user) {
-        console.log("❌ No session found, redirecting to login")
         router.push("/login")
         return
       }
 
       setIsAuthenticated(true)
 
-      // Check if user is admin using server-side API
-      console.log("Calling admin check API...")
       const response = await fetch('/api/admin/check', {
         headers: {
           Authorization: `Bearer ${session.access_token}`,
@@ -53,19 +45,15 @@ export default function AdminDashboardPage() {
       })
 
       const data = await response.json()
-      console.log("ADMIN CHECK RESPONSE:", data)
 
       if (!response.ok || !data.isAdmin) {
-        console.log("❌ User is not admin, role is:", data.role)
         router.push("/")
         return
       }
 
-      console.log("✅ User is admin, granting access")
       setIsAdmin(true)
       await fetchStats()
     } catch (error) {
-      console.error('Admin access check error:', error)
       router.push("/")
     } finally {
       setIsLoading(false)
