@@ -106,7 +106,7 @@ export default function SellerDashboardPage() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-white via-blue-50 to-white">
       <div className="flex">
-        <Sidebar userRole="seller" />
+        <Sidebar />
         
         <div className="flex-1 p-8">
           <motion.div
