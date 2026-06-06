@@ -23,14 +23,7 @@ export default function Home() {
     try {
       const { data: businesses } = await getSupabase()
         .from('businesses')
-        .select(`
-          *,
-          business_images (
-            image_type,
-            image_url,
-            order_index
-          )
-        `)
+        .select('*')
         .eq('approved', true)
         .order('created_at', { ascending: false })
         .limit(8)
@@ -153,7 +146,6 @@ export default function Home() {
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
               {featuredBusinesses.map((business, index) => {
-                const coverImage = business.business_images?.find((img: any) => img.image_type === 'cover')
                 return (
                   <motion.div
                     key={business.id}
@@ -166,9 +158,9 @@ export default function Home() {
                     <Link href={`/business/${business.id}`}>
                       <Card className="overflow-hidden hover:shadow-2xl transition-all duration-300 border-2 border-transparent hover:border-gold">
                         <div className="relative h-48 overflow-hidden">
-                          {coverImage ? (
+                          {business.logo_url || business.cover_url ? (
                             <img
-                              src={coverImage.image_url}
+                              src={business.logo_url || business.cover_url}
                               alt={business.business_name}
                               className="w-full h-full object-cover hover:scale-110 transition-transform duration-300"
                             />
