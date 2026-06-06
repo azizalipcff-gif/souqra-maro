@@ -46,3 +46,50 @@ export const getServerSession = async () => {
   
   return session
 }
+
+// Helper for API routes to create client from request headers
+export const createRouteHandlerClient = (request: Request) => {
+  const cookieHeader = request.headers.get('cookie')
+  
+  return createServerClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    {
+      cookies: {
+        get(name: string) {
+          if (!cookieHeader) return undefined
+          const cookies = cookieHeader.split(';').map(c => c.trim())
+          const found = cookies.find(c => c.startsWith(`${name}=`))
+          return found?.substring(name.length + 1)
+        },
+        set() {
+          // Can't set cookies in API routes easily
+        },
+        remove() {
+          // Can't remove cookies in API routes easily
+        },
+      },
+    }
+  )
+}
+
+// Helper for admin operations using service role key
+export const createAdminClient = () => {
+  return createServerClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!,
+    {
+      cookies: {
+        get() {
+          return undefined
+        },
+        set() {
+          // Admin client doesn't need cookies
+        },
+        remove() {
+          // Admin client doesn't need cookies
+        },
+      },
+    }
+  )
+}

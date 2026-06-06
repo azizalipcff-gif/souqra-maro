@@ -1,76 +1,80 @@
-import { createClient } from '@supabase/supabase-js'
-import { cookies } from 'next/headers'
+import { createRouteHandlerClient, createAdminClient } from '@/lib/supabase/server'
 import { NextResponse } from 'next/server'
 
 export async function POST(request: Request) {
   try {
     console.log("=== ADMIN REJECT BUSINESS API DEBUG ===")
     
-    // Use service role key for admin operations to bypass RLS
-    const supabase = createClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.SUPABASE_SERVICE_ROLE_KEY!,
-      {
-        auth: {
-          autoRefreshToken: false,
-          persistSession: false
-        }
-      }
-    )
-    
-    // Get session from authorization header
     const authHeader = request.headers.get('authorization')
-    console.log("AUTH HEADER:", authHeader)
+    const cookieHeader = request.headers.get('cookie')
+    console.log("AUTH HEADER:", authHeader ? "PRESENT" : "NOT PRESENT")
+    console.log("COOKIE HEADER:", cookieHeader ? "PRESENT" : "NOT PRESENT")
     
-    if (!authHeader) {
-      console.log("❌ No authorization header")
+    if (!authHeader && !cookieHeader) {
+      console.log("❌ No authorization header or cookie")
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    const token = authHeader.replace('Bearer ', '')
-    console.log("TOKEN:", token.substring(0, 20) + "...")
+    const supabase = createRouteHandlerClient(request)
     
-    const { data: { user }, error: userError } = await supabase.auth.getUser(token)
+    console.log("USER AUTHENTICATION START")
     
-    console.log("USER DATA:", user)
-    console.log("USER ERROR:", userError)
+    let user = null
+    let userError = null
+    
+    const { data: { session }, error: sessionError } = await supabase.auth.getSession()
+    console.log("SESSION:", session ? "PRESENT" : "NOT PRESENT")
+    console.log("SESSION ERROR:", sessionError)
+    
+    if (session?.user) {
+      user = session.user
+    } else if (authHeader) {
+      const token = authHeader.replace('Bearer ', '')
+      console.log("TOKEN:", token.substring(0, 20) + "...")
+      const { data: { user: tokenUser }, error: tokenError } = await supabase.auth.getUser(token)
+      console.log("TOKEN USER:", tokenUser ? "PRESENT" : "NOT PRESENT")
+      console.log("TOKEN ERROR:", tokenError)
+      user = tokenUser
+      userError = tokenError
+    }
+    
+    console.log("USER ID:", user?.id)
+    console.log("USER EMAIL:", user?.email)
+    console.log("AUTH ERROR:", userError)
     
     if (userError || !user) {
       console.log("❌ User authentication failed")
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    console.log("USER ID:", user.id)
-    console.log("USER EMAIL:", user.email)
+    // Use service role key to bypass RLS for profile query
+    const adminSupabase = createAdminClient()
 
     // Check if user is admin
-    console.log("=== PROFILE QUERY DEBUG ===")
+    console.log("PROFILE QUERY START")
     console.log("Querying profiles table for user ID:", user.id)
     
-    const { data: profile, error: profileError } = await supabase
+    const { data: profile, error: profileError } = await adminSupabase
       .from('profiles')
       .select('id, full_name, role, created_at')
       .eq('id', user.id)
       .maybeSingle()
 
-    console.log("PROFILE DATA:", profile)
+    console.log("PROFILE DATA:", profile ? "FOUND" : "NOT FOUND")
     console.log("PROFILE ERROR:", profileError)
     
     if (profileError) {
       console.error("❌ Profile query error:", profileError)
       console.error("Error code:", profileError.code)
       console.error("Error message:", profileError.message)
-      console.error("Error details:", profileError.details)
+      return NextResponse.json({ error: 'Failed to query profile' }, { status: 500 })
     }
 
     console.log("PROFILE ROLE:", profile?.role)
-    console.log("PROFILE ROLE TYPE:", typeof profile?.role)
-    console.log("IS ADMIN CHECK:", profile?.role === "admin")
-    console.log("SAFE ADMIN CHECK:", (profile?.role || "").toLowerCase() === "admin")
+    console.log("IS ADMIN:", profile?.role === "admin")
 
-    if (profileError || profile?.role !== 'admin') {
+    if (!profile || profile?.role !== 'admin') {
       console.log("❌ Admin access denied")
-      console.log("Reason:", profileError ? "Profile query failed" : `Role is '${profile?.role}', expected 'admin'`)
       return NextResponse.json({ error: 'Forbidden - Admin access required' }, { status: 403 })
     }
 
@@ -84,7 +88,7 @@ export async function POST(request: Request) {
     }
 
     // Delete business (reject)
-    const { error: deleteError } = await supabase
+    const { error: deleteError } = await adminSupabase
       .from('businesses')
       .delete()
       .eq('id', businessId)
@@ -97,6 +101,9 @@ export async function POST(request: Request) {
     return NextResponse.json({ success: true, message: 'Business rejected successfully' })
   } catch (error) {
     console.error('Server error:', error)
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
+    return NextResponse.json({ 
+      error: 'Internal server error', 
+      details: (error as any)?.message 
+    }, { status: 500 })
   }
 }
