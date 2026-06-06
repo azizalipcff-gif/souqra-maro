@@ -28,10 +28,16 @@ export default function AdminDashboardPage() {
 
   const checkAdminAccess = async () => {
     try {
+      console.log("=== ADMIN DASHBOARD AUTH CHECK ===")
       const supabase = getSupabase()
       const { data: { session } } = await supabase.auth.getSession()
       
+      console.log("SESSION USER:", session?.user?.id)
+      console.log("SESSION EMAIL:", session?.user?.email)
+      console.log("SESSION EXISTS:", !!session)
+      
       if (!session?.user) {
+        console.log("❌ No session found, redirecting to login")
         router.push("/login")
         return
       }
@@ -39,17 +45,29 @@ export default function AdminDashboardPage() {
       setIsAuthenticated(true)
 
       // Check if user is admin
-      const { data: profile } = await supabase
+      console.log("Fetching profile for user ID:", session.user.id)
+      const { data: profile, error: profileError } = await supabase
         .from('profiles')
-        .select('role')
+        .select('*')
         .eq('id', session.user.id)
         .single()
 
+      console.log("PROFILE DATA:", profile)
+      console.log("PROFILE ERROR:", profileError)
+      console.log("PROFILE ROLE:", profile?.role)
+      console.log("IS ADMIN:", profile?.role === "admin")
+
+      if (profileError) {
+        console.error("Profile query error:", profileError)
+      }
+
       if (profile?.role !== 'admin') {
+        console.log("❌ User is not admin, role is:", profile?.role)
         router.push("/")
         return
       }
 
+      console.log("✅ User is admin, granting access")
       setIsAdmin(true)
       await fetchStats()
     } catch (error) {

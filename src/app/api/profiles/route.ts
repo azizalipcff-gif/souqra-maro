@@ -18,7 +18,7 @@ export async function GET(request: NextRequest) {
     const { data: profile, error } = await supabase
       .from('profiles')
       .select('*')
-      .eq('user_id', user.id)
+      .eq('id', user.id)
       .single()
 
     if (error) {
@@ -57,7 +57,7 @@ export async function POST(request: NextRequest) {
     const { data: existingProfile } = await supabase
       .from('profiles')
       .select('id')
-      .eq('user_id', user.id)
+      .eq('id', user.id)
       .single()
 
     if (existingProfile) {
@@ -80,7 +80,7 @@ export async function POST(request: NextRequest) {
     const { data: profile, error } = await supabase
       .from('profiles')
       .insert({
-        user_id: user.id,
+        id: user.id,
         full_name,
         username,
         bio,
@@ -145,7 +145,7 @@ export async function PUT(request: NextRequest) {
         facebook,
         avatar_url,
       })
-      .eq('user_id', user.id)
+      .eq('id', user.id)
       .select()
       .single()
 
