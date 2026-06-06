@@ -53,25 +53,19 @@ export default function AdminPendingPage() {
 
       setIsAuthenticated(true)
 
-      // Check if user is admin
-      console.log("Fetching profile for user ID:", session.user.id)
-      const { data: profile, error: profileError } = await supabase
-        .from('profiles')
-        .select('*')
-        .eq('id', session.user.id)
-        .single()
+      // Check if user is admin using server-side API
+      console.log("Calling admin check API...")
+      const response = await fetch('/api/admin/check', {
+        headers: {
+          Authorization: `Bearer ${session.access_token}`,
+        },
+      })
 
-      console.log("PROFILE DATA:", profile)
-      console.log("PROFILE ERROR:", profileError)
-      console.log("PROFILE ROLE:", profile?.role)
-      console.log("IS ADMIN:", profile?.role === "admin")
+      const data = await response.json()
+      console.log("ADMIN CHECK RESPONSE:", data)
 
-      if (profileError) {
-        console.error("Profile query error:", profileError)
-      }
-
-      if (profile?.role !== 'admin') {
-        console.log("❌ User is not admin, role is:", profile?.role)
+      if (!response.ok || !data.isAdmin) {
+        console.log("❌ User is not admin, role is:", data.role)
         router.push("/")
         return
       }
