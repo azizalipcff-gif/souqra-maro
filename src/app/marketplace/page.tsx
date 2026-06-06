@@ -57,27 +57,28 @@ export default function MarketplacePage() {
   const loadBusinesses = async () => {
     setIsLoading(true)
     try {
-      let query = getSupabase()
-        .from('businesses')
-        .select('*')
-        .eq('approved', true)
+      const response = await fetch('/api/businesses/public?limit=100')
+      const { businesses } = await response.json()
 
-      if (selectedCategory !== "All Categories") {
-        query = query.eq('category', selectedCategory)
-      }
-
-      if (selectedLocation !== "All Morocco") {
-        query = query.eq('city', selectedLocation)
-      }
-
-      if (searchQuery) {
-        query = query.ilike('business_name', `%${searchQuery}%`)
-      }
-
-      const { data } = await query.order('created_at', { ascending: false })
-
-      if (data) {
-        setBusinesses(data)
+      if (businesses) {
+        // Filter on client side for now
+        let filtered = businesses
+        
+        if (selectedCategory !== "All Categories") {
+          filtered = filtered.filter((b: any) => b.category === selectedCategory)
+        }
+        
+        if (selectedLocation !== "All Morocco") {
+          filtered = filtered.filter((b: any) => b.city === selectedLocation)
+        }
+        
+        if (searchQuery) {
+          filtered = filtered.filter((b: any) => 
+            b.business_name.toLowerCase().includes(searchQuery.toLowerCase())
+          )
+        }
+        
+        setBusinesses(filtered)
       }
     } catch (error) {
       console.error('Error loading businesses:', error)

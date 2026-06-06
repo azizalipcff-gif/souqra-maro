@@ -21,12 +21,8 @@ export default function Home() {
 
   const loadFeaturedBusinesses = async () => {
     try {
-      const { data: businesses } = await getSupabase()
-        .from('businesses')
-        .select('*')
-        .eq('approved', true)
-        .order('created_at', { ascending: false })
-        .limit(8)
+      const response = await fetch('/api/businesses/public?limit=8')
+      const { businesses } = await response.json()
 
       if (businesses) {
         setFeaturedBusinesses(businesses)
