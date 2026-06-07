@@ -6,7 +6,7 @@ const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key'
 export interface AuthUser {
   userId: string
   email: string
-  role: 'customer' | 'seller' | 'admin'
+  role: 'customer' | 'seller'
 }
 
 export function verifyToken(token: string): AuthUser | null {
@@ -51,9 +51,5 @@ export function requireRole(roles: string[]) {
 }
 
 export function requireSeller(request: NextRequest): AuthUser {
-  return requireRole(['seller', 'admin'])(request)
-}
-
-export function requireAdmin(request: NextRequest): AuthUser {
-  return requireRole(['admin'])(request)
+  return requireRole(['seller'])(request)
 }

@@ -8,7 +8,7 @@ export interface User {
   name: string
   phone?: string
   avatar?: string
-  role: 'customer' | 'seller' | 'admin'
+  role: 'customer' | 'seller'
   is_verified: boolean
   is_active: boolean
   created_at: Date
