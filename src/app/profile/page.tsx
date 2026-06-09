@@ -119,10 +119,9 @@ export default function ProfilePage() {
   const handleAvatarChange = async (url: string) => {
     try {
       const supabase = getSupabase()
-      const { data } = await supabase.auth.getSession()
-      const session = data?.session
+      const { data: { user }, error: userError } = await supabase.auth.getUser()
       
-      if (!session?.user) {
+      if (userError || !user) {
         setError('Not authenticated')
         return
       }
@@ -130,7 +129,7 @@ export default function ProfilePage() {
       const { error } = await supabase
         .from('profiles')
         .update({ avatar_url: url })
-        .eq('id', session.user.id)
+        .eq('id', user.id)
 
       if (error) throw error
 
@@ -146,10 +145,9 @@ export default function ProfilePage() {
   const handleSaveProfile = async (formData: any) => {
     try {
       const supabase = getSupabase()
-      const { data } = await supabase.auth.getSession()
-      const session = data?.session
+      const { data: { user }, error: userError } = await supabase.auth.getUser()
       
-      if (!session?.user) {
+      if (userError || !user) {
         setError('Not authenticated')
         return
       }
@@ -157,7 +155,7 @@ export default function ProfilePage() {
       const { error } = await supabase
         .from('profiles')
         .update(formData)
-        .eq('id', session.user.id)
+        .eq('id', user.id)
 
       if (error) throw error
 
