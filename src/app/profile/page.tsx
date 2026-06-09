@@ -74,11 +74,16 @@ export default function ProfilePage() {
     try {
       const supabase = getSupabase()
       
+      console.log("LOADING PROFILE FOR USER ID:", userId)
+      
       const { data, error } = await supabase
         .from('profiles')
-        .select('id, full_name, role, created_at')
-        .eq('id', userId)
+        .select('id, user_id, full_name, username, phone, city, bio, avatar_url, role, created_at')
+        .eq('user_id', userId)
         .maybeSingle()
+
+      console.log("PROFILE DATA:", data)
+      console.log("PROFILE ERROR:", error)
 
       if (error) {
         // If profile doesn't exist, create a default one
@@ -121,6 +126,9 @@ export default function ProfilePage() {
       const supabase = getSupabase()
       const { data: { user }, error: userError } = await supabase.auth.getUser()
       
+      console.log("AVATAR UPDATE USER =>", user)
+      console.log("AVATAR UPDATE USER ERROR =>", userError)
+      
       if (userError || !user) {
         setError('Not authenticated')
         return
@@ -129,7 +137,9 @@ export default function ProfilePage() {
       const { error } = await supabase
         .from('profiles')
         .update({ avatar_url: url })
-        .eq('id', user.id)
+        .eq('user_id', user.id)
+
+      console.log("AVATAR UPDATE ERROR =>", error)
 
       if (error) throw error
 
@@ -147,15 +157,26 @@ export default function ProfilePage() {
       const supabase = getSupabase()
       const { data: { user }, error: userError } = await supabase.auth.getUser()
       
+      console.log("USER =>", user)
+      console.log("AUTH ERROR =>", userError)
+      
       if (userError || !user) {
+        console.error("No user logged in")
         setError('Not authenticated')
         return
       }
 
-      const { error } = await supabase
+      console.log("FORM DATA =>", formData)
+      console.log("USER ID =>", user.id)
+
+      const { data, error } = await supabase
         .from('profiles')
         .update(formData)
-        .eq('id', user.id)
+        .eq('user_id', user.id)
+        .select()
+
+      console.log("UPDATE DATA =>", data)
+      console.log("UPDATE ERROR =>", error)
 
       if (error) throw error
 
