@@ -74,24 +74,59 @@ export default function ProfilePage() {
     try {
       const supabase = getSupabase()
       
+      // Debug auth user first
+      const { data: { user }, error: authError } = await supabase.auth.getUser()
+      console.log("USER =>", user)
+      console.log("AUTH ERROR =>", authError)
+      
+      if (authError || !user) {
+        console.error("No user logged in or auth error")
+        setError('Authentication error')
+        setIsLoading(false)
+        return
+      }
+      
       console.log("LOADING PROFILE FOR USER ID:", userId)
       
+      // Debug profile fetch with .select('*')
       const { data, error } = await supabase
         .from('profiles')
-        .select('id, user_id, full_name, username, phone, city, bio, avatar_url, role, created_at')
-        .eq('user_id', userId)
+        .select('*')
+        .eq('user_id', user.id)
         .maybeSingle()
 
-      console.log("PROFILE DATA:", data)
-      console.log("PROFILE ERROR:", error)
+      console.log("PROFILE DATA =>", data)
+      console.log("PROFILE ERROR =>", error)
 
       if (error) {
         // If profile doesn't exist, create a default one
         if (error.code === 'PGRST116') {
-          setProfile({
-            ...DEFAULT_PROFILE,
-            id: userId,
-          })
+          console.log("Profile does not exist, creating default profile")
+          // Auto-create profile
+          const { data: newProfile, error: insertError } = await supabase
+            .from('profiles')
+            .insert({
+              user_id: user.id,
+              full_name: user.email?.split('@')[0] || '',
+              username: user.email?.split('@')[0] || '',
+              email: user.email,
+            })
+            .select()
+            .single()
+          
+          if (insertError) {
+            console.error("Error creating profile:", insertError)
+            setProfile({
+              ...DEFAULT_PROFILE,
+              id: userId,
+            })
+          } else {
+            console.log("Created new profile:", newProfile)
+            setProfile({
+              ...DEFAULT_PROFILE,
+              ...newProfile,
+            })
+          }
           return
         }
         throw error
@@ -103,10 +138,32 @@ export default function ProfilePage() {
           ...data,
         })
       } else {
-        setProfile({
-          ...DEFAULT_PROFILE,
-          id: userId,
-        })
+        console.log("Profile data is null, auto-creating profile")
+        // Auto-create profile if null
+        const { data: newProfile, error: insertError } = await supabase
+          .from('profiles')
+          .insert({
+            user_id: user.id,
+            full_name: user.email?.split('@')[0] || '',
+            username: user.email?.split('@')[0] || '',
+            email: user.email,
+          })
+          .select()
+          .single()
+        
+        if (insertError) {
+          console.error("Error creating profile:", insertError)
+          setProfile({
+            ...DEFAULT_PROFILE,
+            id: userId,
+          })
+        } else {
+          console.log("Created new profile:", newProfile)
+          setProfile({
+            ...DEFAULT_PROFILE,
+            ...newProfile,
+          })
+        }
       }
     } catch (error) {
       console.error('Error loading profile:', error)
