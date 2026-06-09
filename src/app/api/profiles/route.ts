@@ -3,15 +3,12 @@ import { createRouteHandlerClient } from '@/lib/supabase/server'
 
 export async function GET(request: NextRequest) {
   try {
-    const authHeader = request.headers.get('authorization')
-    
-    if (!authHeader) {
-      return NextResponse.json({ profile: null }, { status: 200 })
-    }
-
-    const token = authHeader.replace('Bearer ', '')
     const supabase = createRouteHandlerClient(request)
-    const { data: { user }, error: userError } = await supabase.auth.getUser(token)
+
+    const { data: { user }, error: userError } = await supabase.auth.getUser()
+
+    console.log("USER =>", user)
+    console.log("AUTH ERROR =>", userError)
 
     if (userError || !user) {
       return NextResponse.json({ profile: null }, { status: 200 })
@@ -20,30 +17,29 @@ export async function GET(request: NextRequest) {
     const { data: profile, error } = await supabase
       .from('profiles')
       .select('id, full_name, role, created_at')
-      .eq('id', user.id)
+      .eq('user_id', user.id)
       .maybeSingle()
+
+    console.log("PROFILE =>", profile)
+    console.log("PROFILE ERROR =>", error)
 
     if (error) {
       return NextResponse.json({ profile: null }, { status: 200 })
     }
 
     return NextResponse.json({ profile })
+
   } catch (error) {
+    console.log("GET PROFILE ERROR =>", error)
     return NextResponse.json({ profile: null }, { status: 200 })
   }
 }
 
 export async function POST(request: NextRequest) {
   try {
-    const authHeader = request.headers.get('authorization')
-    
-    if (!authHeader) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-    }
-
-    const token = authHeader.replace('Bearer ', '')
     const supabase = createRouteHandlerClient(request)
-    const { data: { user }, error: userError } = await supabase.auth.getUser(token)
+
+    const { data: { user }, error: userError } = await supabase.auth.getUser()
 
     if (userError || !user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
@@ -52,45 +48,37 @@ export async function POST(request: NextRequest) {
     const body = await request.json()
     const { full_name } = body
 
-    const { data: existingProfile } = await supabase
-      .from('profiles')
-      .select('id')
-      .eq('id', user.id)
-      .maybeSingle()
-
-    if (existingProfile) {
-      return NextResponse.json({ error: 'Profile already exists' }, { status: 400 })
-    }
-
     const { data: profile, error } = await supabase
       .from('profiles')
       .insert({
-        id: user.id,
+        user_id: user.id,
         full_name,
         role: 'client',
       })
       .select('id, full_name, role, created_at')
       .maybeSingle()
 
-    if (error) throw error
+    if (error) {
+      console.log("CREATE ERROR =>", error)
+      throw error
+    }
 
     return NextResponse.json({ profile })
+
   } catch (error) {
-    return NextResponse.json({ error: 'Failed to create profile' }, { status: 500 })
+    console.log("POST PROFILE ERROR =>", error)
+    return NextResponse.json(
+      { error: 'Failed to create profile' },
+      { status: 500 }
+    )
   }
 }
 
 export async function PUT(request: NextRequest) {
   try {
-    const authHeader = request.headers.get('authorization')
-    
-    if (!authHeader) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-    }
-
-    const token = authHeader.replace('Bearer ', '')
     const supabase = createRouteHandlerClient(request)
-    const { data: { user }, error: userError } = await supabase.auth.getUser(token)
+
+    const { data: { user }, error: userError } = await supabase.auth.getUser()
 
     if (userError || !user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
@@ -104,14 +92,22 @@ export async function PUT(request: NextRequest) {
       .update({
         full_name,
       })
-      .eq('id', user.id)
+      .eq('user_id', user.id)
       .select('id, full_name, role, created_at')
       .maybeSingle()
 
-    if (error) throw error
+    if (error) {
+      console.log("UPDATE ERROR =>", error)
+      throw error
+    }
 
     return NextResponse.json({ profile })
+
   } catch (error) {
-    return NextResponse.json({ error: 'Failed to update profile' }, { status: 500 })
+    console.log("PUT PROFILE ERROR =>", error)
+    return NextResponse.json(
+      { error: 'Failed to update profile' },
+      { status: 500 }
+    )
   }
 }
