@@ -13,67 +13,54 @@ function AuthCallbackContent() {
 
   useEffect(() => {
     const handleCallback = async () => {
-      const code = searchParams.get('code')
-      const errorParam = searchParams.get('error')
-      const errorDescription = searchParams.get('error_description')
-      const next = searchParams.get('next') || '/profile'
-
-      console.log('Callback params:', { code: code ? 'present' : 'missing', error: errorParam, errorDescription, next })
-
-      // Handle OAuth errors
-      if (errorParam) {
-        console.error('OAuth error:', errorParam, errorDescription)
-        setError(errorDescription || errorParam)
-        setStatus('error')
-        setTimeout(() => {
-          router.push(`/login?error=${encodeURIComponent(errorDescription || errorParam)}&next=${encodeURIComponent(next)}`)
-        }, 2000)
-        return
-      }
-
-      if (!code) {
-        console.error('No code provided in callback')
-        setError('no_code')
-        setStatus('error')
-        setTimeout(() => {
-          router.push(`/login?error=no_code&next=${encodeURIComponent(next)}`)
-        }, 2000)
-        return
-      }
-
       try {
         const supabase = getSupabase()
-        console.log('Exchanging code for session...')
-        const { data, error: exchangeError } = await supabase.auth.exchangeCodeForSession(code)
         
-        if (exchangeError) {
-          console.error('Error exchanging code for session:', exchangeError)
-          setError(exchangeError.message)
+        // Check for error in URL
+        const errorParam = searchParams.get('error')
+        const errorDescription = searchParams.get('error_description')
+        
+        if (errorParam) {
+          console.error('OAuth error:', errorParam, errorDescription)
+          setError(errorDescription || errorParam)
           setStatus('error')
           setTimeout(() => {
-            router.push(`/login?error=${encodeURIComponent(exchangeError.message)}&next=${encodeURIComponent(next)}`)
+            router.push('/auth/login?error=' + encodeURIComponent(errorDescription || errorParam))
           }, 2000)
           return
         }
 
-        if (!data?.user) {
-          console.error('No user data after code exchange')
-          setError('no_user')
+        // Get session from URL (OAuth callback)
+        const { data, error: sessionError } = await supabase.auth.getSessionFromUrl()
+        
+        if (sessionError) {
+          console.error('Error getting session from URL:', sessionError)
+          setError(sessionError.message)
           setStatus('error')
           setTimeout(() => {
-            router.push(`/login?error=no_user&next=${encodeURIComponent(next)}`)
+            router.push('/auth/login?error=' + encodeURIComponent(sessionError.message))
           }, 2000)
           return
         }
 
-        console.log('Session created successfully for user:', data.user.id)
+        if (!data?.session?.user) {
+          console.error('No session found')
+          setError('no_session')
+          setStatus('error')
+          setTimeout(() => {
+            router.push('/auth/login?error=no_session')
+          }, 2000)
+          return
+        }
+
+        console.log('Session created successfully for user:', data.session.user.id)
 
         // Check if profile exists, create if not
         const { data: existingProfile, error: profileError } = await supabase
           .from('profiles')
           .select('id')
-          .eq('user_id', data.user.id)
-          .single()
+          .eq('user_id', data.session.user.id)
+          .maybeSingle()
 
         if (profileError && profileError.code !== 'PGRST116') {
           console.error('Error checking profile:', profileError)
@@ -84,8 +71,9 @@ function AuthCallbackContent() {
           const { error: insertError } = await supabase
             .from('profiles')
             .insert({
-              user_id: data.user.id,
-              full_name: data.user.user_metadata?.full_name || data.user.email,
+              user_id: data.session.user.id,
+              full_name: data.session.user.user_metadata?.full_name || data.session.user.email,
+              username: data.session.user.email?.split('@')[0] || '',
               role: 'client',
             })
 
@@ -97,16 +85,20 @@ function AuthCallbackContent() {
         }
 
         setStatus('success')
-        console.log('Redirecting to:', next)
+        
+        // Get next parameter or default to profile
+        const next = searchParams.get('next') || '/profile'
+        
         setTimeout(() => {
           router.push(next)
+          router.refresh()
         }, 500)
       } catch (error) {
         console.error('Unexpected error in callback:', error)
         setError('unexpected')
         setStatus('error')
         setTimeout(() => {
-          router.push(`/login?error=unexpected&next=${encodeURIComponent(next)}`)
+          router.push('/auth/login?error=unexpected')
         }, 2000)
       }
     }
@@ -117,15 +109,15 @@ function AuthCallbackContent() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-white via-blue-50 to-white flex items-center justify-center">
       <div className="text-center">
-        {status === 'loading' && (
+        {status === "loading" && (
           <div className="flex flex-col items-center gap-4">
-            <Loader2 className="h-12 w-12 animate-spin text-royal-blue" />
+            <Loader2 className="h-12 w-12 animate-spin text-blue-600" />
             <p className="text-xl font-semibold text-gray-700">Logging you in...</p>
             <p className="text-sm text-gray-500">Please wait while we set up your account</p>
           </div>
         )}
         
-        {status === 'success' && (
+        {status === "success" && (
           <div className="flex flex-col items-center gap-4">
             <div className="h-12 w-12 rounded-full bg-green-100 flex items-center justify-center">
               <svg className="h-6 w-6 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -137,11 +129,11 @@ function AuthCallbackContent() {
           </div>
         )}
         
-        {status === 'error' && (
+        {status === "error" && (
           <div className="flex flex-col items-center gap-4">
             <div className="h-12 w-12 rounded-full bg-red-100 flex items-center justify-center">
               <svg className="h-6 w-6 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18M6 6l12 12" />
               </svg>
             </div>
             <p className="text-xl font-semibold text-gray-700">Authentication Error</p>
@@ -158,7 +150,7 @@ export default function AuthCallbackPage() {
   return (
     <Suspense fallback={
       <div className="min-h-screen bg-gradient-to-br from-white via-blue-50 to-white flex items-center justify-center">
-        <Loader2 className="h-8 w-8 animate-spin text-royal-blue" />
+        <Loader2 className="h-8 w-8 animate-spin text-blue-600" />
       </div>
     }>
       <AuthCallbackContent />

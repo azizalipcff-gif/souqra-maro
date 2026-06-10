@@ -93,7 +93,7 @@ export async function PUT(request: NextRequest) {
         full_name,
       })
       .eq('user_id', user.id)
-      .select('id, full_name, role, created_at')
+      .select('id, user_id, full_name, username, phone, city, bio, avatar_url, role, created_at')
       .maybeSingle()
 
     if (error) {

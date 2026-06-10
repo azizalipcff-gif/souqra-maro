@@ -48,6 +48,8 @@ function LoginForm() {
     }
 
     if (data.user) {
+      // Add delay to ensure session is properly set
+      await new Promise(resolve => setTimeout(resolve, 500))
       router.push("/")
       router.refresh()
     }
@@ -60,7 +62,7 @@ function LoginForm() {
   const handleGoogleLogin = async () => {
     setIsGoogleLoading(true)
     try {
-      const origin = process.env.NEXT_PUBLIC_SITE_URL || 'https://souqora.vercel.app'
+      const origin = process.env.NEXT_PUBLIC_SITE_URL || window.location.origin
       const { data, error } = await getSupabase().auth.signInWithOAuth({
         provider: 'google',
         options: {
@@ -74,13 +76,13 @@ function LoginForm() {
 
       if (error) {
         console.error('Google login error:', error)
-        alert(`Login failed: ${error.message}`)
+        setError(error.message)
         setIsGoogleLoading(false)
       }
       // If successful, the redirect will happen automatically
     } catch (error) {
       console.error('Google login error:', error)
-      alert('An unexpected error occurred during login')
+      setError('An unexpected error occurred during login')
       setIsGoogleLoading(false)
     }
   }

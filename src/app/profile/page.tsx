@@ -45,8 +45,28 @@ export default function ProfilePage() {
   const [isAuthenticated, setIsAuthenticated] = useState(false)
 
   useEffect(() => {
+    const supabase = getSupabase()
+    
+    // Initial auth check
     checkAuthAndLoadProfile()
-  }, [])
+
+    // Listen for auth state changes
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      console.log('Profile page auth state changed:', event, session?.user?.id)
+      
+      if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') {
+        setIsAuthenticated(true)
+        loadProfile(session?.user?.id || '', session?.user?.email)
+      } else if (event === 'SIGNED_OUT') {
+        setIsAuthenticated(false)
+        router.push('/auth/login?next=/profile')
+      }
+    })
+
+    return () => {
+      subscription.unsubscribe()
+    }
+  }, [router])
 
   const checkAuthAndLoadProfile = async () => {
     try {
@@ -56,7 +76,7 @@ export default function ProfilePage() {
       
       if (!session?.user) {
         setIsAuthenticated(false)
-        router.push("/login?next=/profile")
+        router.push("/auth/login?next=/profile")
         return
       }
 

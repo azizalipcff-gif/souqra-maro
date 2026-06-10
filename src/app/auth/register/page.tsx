@@ -73,11 +73,11 @@ export default function RegisterPage() {
   const handleGoogleLogin = async () => {
     setIsGoogleLoading(true)
     try {
-      const productionUrl = 'https://souqora-morocco.vercel.app'
+      const origin = process.env.NEXT_PUBLIC_SITE_URL || window.location.origin
       const { data, error } = await getSupabase().auth.signInWithOAuth({
         provider: 'google',
         options: {
-          redirectTo: `${productionUrl}/auth/callback`,
+          redirectTo: `${origin}/auth/callback`,
           queryParams: {
             access_type: 'offline',
             prompt: 'consent',
@@ -87,12 +87,12 @@ export default function RegisterPage() {
 
       if (error) {
         console.error('Google login error:', error)
-        alert(`Login failed: ${error.message}`)
+        setError(error.message)
         setIsGoogleLoading(false)
       }
     } catch (error) {
       console.error('Google login error:', error)
-      alert('An unexpected error occurred during login')
+      setError('An unexpected error occurred during login')
       setIsGoogleLoading(false)
     }
   }

@@ -21,7 +21,27 @@ export function Header() {
   const [isLoading, setIsLoading] = useState(true)
 
   useEffect(() => {
+    const supabase = getSupabase()
+    
+    // Initial auth check
     checkAuth()
+
+    // Listen for auth state changes
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      console.log('Auth state changed:', event, session?.user?.id)
+      
+      if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') {
+        setIsAuthenticated(true)
+        loadProfile()
+      } else if (event === 'SIGNED_OUT') {
+        setIsAuthenticated(false)
+        setProfile(null)
+      }
+    })
+
+    return () => {
+      subscription.unsubscribe()
+    }
   }, [])
 
   const checkAuth = async () => {
