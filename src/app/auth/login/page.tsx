@@ -31,11 +31,31 @@ function LoginForm() {
     }
   }, [searchParams])
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault()
-    // Handle login logic here
-    console.log("Login:", formData)
+  const handleSubmit = async (e: React.FormEvent) => {
+  e.preventDefault()
+
+  try {
+    setError(null)
+
+    const { data, error } = await getSupabase().auth.signInWithPassword({
+      email: formData.email,
+      password: formData.password,
+    })
+
+    if (error) {
+      setError(error.message)
+      return
+    }
+
+    if (data.user) {
+      router.push("/")
+      router.refresh()
+    }
+  } catch (err) {
+    console.error("Login error:", err)
+    setError("Login failed")
   }
+}
 
   const handleGoogleLogin = async () => {
     setIsGoogleLoading(true)
@@ -156,9 +176,13 @@ function LoginForm() {
                   </Link>
                 </div>
 
-                <Button type="submit" className="w-full" size="lg">
-                  Sign In
-                </Button>
+                <Button
+  type="submit"
+  className="w-full"
+  size="lg"
+>
+  Sign In
+</Button>
               </form>
 
               <div className="mt-6">
