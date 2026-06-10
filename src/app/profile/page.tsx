@@ -74,8 +74,19 @@ export default function ProfilePage() {
   const checkAuthAndLoadProfile = async () => {
     try {
       const supabase = getSupabase()
-      const { data } = await supabase.auth.getSession()
-      const session = data?.session
+      
+      // Wait for session to be available
+      let retries = 0
+      let session = null
+      
+      while (retries < 3 && !session) {
+        const { data } = await supabase.auth.getSession()
+        session = data?.session
+        if (!session) {
+          await new Promise(resolve => setTimeout(resolve, 200))
+          retries++
+        }
+      }
       
       if (!session?.user) {
         setIsAuthenticated(false)

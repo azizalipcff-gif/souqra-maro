@@ -11,6 +11,7 @@ CREATE TABLE IF NOT EXISTS profiles (
   website TEXT,
   instagram TEXT,
   facebook TEXT,
+  role TEXT DEFAULT 'client',
   created_at TIMESTAMP WITH TIME ZONE DEFAULT TIMEZONE('utc'::text, NOW()) NOT NULL,
   updated_at TIMESTAMP WITH TIME ZONE DEFAULT TIMEZONE('utc'::text, NOW()) NOT NULL
 );
@@ -42,7 +43,7 @@ CREATE POLICY "Users can view own profile"
   ON profiles FOR SELECT
   USING (auth.uid() = user_id);
 
--- Users can view all profiles (for public profiles)
+-- Profiles are publicly viewable (optional - remove if you want private profiles)
 CREATE POLICY "Profiles are publicly viewable"
   ON profiles FOR SELECT
   USING (true);
@@ -55,9 +56,21 @@ CREATE POLICY "Users can insert own profile"
 -- Users can update their own profile
 CREATE POLICY "Users can update own profile"
   ON profiles FOR UPDATE
-  USING (auth.uid() = user_id);
+  USING (auth.uid() = user_id)
+  WITH CHECK (auth.uid() = user_id);
 
 -- Users can delete their own profile
 CREATE POLICY "Users can delete own profile"
   ON profiles FOR DELETE
   USING (auth.uid() = user_id);
+
+-- Migration to add role column if it doesn't exist
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM information_schema.columns 
+    WHERE table_name = 'profiles' AND column_name = 'role'
+  ) THEN
+    ALTER TABLE profiles ADD COLUMN role TEXT DEFAULT 'client';
+  END IF;
+END $$;

@@ -35,15 +35,19 @@ export async function GET(request: Request) {
     }
 
     if (session?.user) {
-      // Create profile if it doesn't exist
-      const { data: existingProfile } = await supabase
+      // Create profile if it doesn't exist using upsert to prevent duplicates
+      const { data: existingProfile, error: profileError } = await supabase
         .from('profiles')
         .select('id')
         .eq('user_id', session.user.id)
         .maybeSingle()
 
+      if (profileError && profileError.code !== 'PGRST116') {
+        console.error('Error checking profile:', profileError)
+      }
+
       if (!existingProfile) {
-        await supabase
+        const { error: insertError } = await supabase
           .from('profiles')
           .upsert({
             user_id: session.user.id,
@@ -54,6 +58,10 @@ export async function GET(request: Request) {
             onConflict: 'user_id',
             ignoreDuplicates: false,
           })
+
+        if (insertError) {
+          console.error('Error creating profile:', insertError)
+        }
       }
     }
   }
