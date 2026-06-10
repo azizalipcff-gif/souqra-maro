@@ -33,8 +33,41 @@ function AuthCallbackContent() {
         // Get code from URL (OAuth callback)
         const code = searchParams.get('code')
         
+        // If no code, check for access_token in hash (implicit flow fallback)
         if (!code) {
-          console.error('No code in URL')
+          const hash = window.location.hash
+          const accessTokenMatch = hash.match(/access_token=([^&]+)/)
+          if (accessTokenMatch) {
+            console.log('Using implicit flow with access token from hash')
+            // For implicit flow, we need to use getSession instead
+            const { data: { session }, error: sessionError } = await supabase.auth.getSession()
+            
+            if (sessionError) {
+              console.error('Error getting session from implicit flow:', sessionError)
+              setError(sessionError.message)
+              setStatus('error')
+              setTimeout(() => {
+                router.push('/auth/login?error=' + encodeURIComponent(sessionError.message))
+              }, 2000)
+              return
+            }
+
+            if (!session?.user) {
+              console.error('No session found in implicit flow')
+              setError('no_session')
+              setStatus('error')
+              setTimeout(() => {
+                router.push('/auth/login?error=no_session')
+              }, 2000)
+              return
+            }
+
+            // Continue with profile creation and redirect
+            await handleProfileCreationAndRedirect(session, searchParams, router, setStatus)
+            return
+          }
+          
+          console.error('No code in URL and no access token in hash')
           setError('no_code')
           setStatus('error')
           setTimeout(() => {
@@ -43,7 +76,7 @@ function AuthCallbackContent() {
           return
         }
 
-        // Exchange code for session
+        // Exchange code for session (PKCE flow)
         const { data: { session }, error: sessionError } = await supabase.auth.exchangeCodeForSession(code)
         
         if (sessionError) {
@@ -66,50 +99,7 @@ function AuthCallbackContent() {
           return
         }
 
-        console.log('Session created successfully for user:', session.user.id)
-
-        // Check if profile exists, create if not using upsert to prevent duplicates
-        const { data: existingProfile, error: profileError } = await supabase
-          .from('profiles')
-          .select('id')
-          .eq('user_id', session.user.id)
-          .maybeSingle()
-
-        if (profileError && profileError.code !== 'PGRST116') {
-          console.error('Error checking profile:', profileError)
-        }
-
-        if (!existingProfile) {
-          console.log('Creating profile for user...')
-          const { error: insertError } = await supabase
-            .from('profiles')
-            .upsert({
-              user_id: session.user.id,
-              full_name: session.user.user_metadata?.full_name || session.user.email,
-              username: session.user.email?.split('@')[0] || '',
-              role: 'client',
-            }, {
-              onConflict: 'user_id',
-              ignoreDuplicates: false,
-            })
-
-          if (insertError) {
-            console.error('Error creating profile:', insertError)
-          } else {
-            console.log('Profile created successfully')
-          }
-        }
-
-        setStatus('success')
-        
-        // Get next parameter or default to profile
-        const next = searchParams.get('next') || '/profile'
-        
-        // Wait for session to be fully persisted before redirect
-        setTimeout(() => {
-          router.push(next)
-          router.refresh()
-        }, 500)
+        await handleProfileCreationAndRedirect(session, searchParams, router, setStatus)
       } catch (error) {
         console.error('Unexpected error in callback:', error)
         setError('unexpected')
@@ -118,6 +108,55 @@ function AuthCallbackContent() {
           router.push('/auth/login?error=unexpected')
         }, 2000)
       }
+    }
+
+    const handleProfileCreationAndRedirect = async (session: any, searchParams: any, router: any, setStatus: any) => {
+      const supabase = getSupabase()
+      
+      console.log('Session created successfully for user:', session.user.id)
+
+      // Check if profile exists, create if not using upsert to prevent duplicates
+      const { data: existingProfile, error: profileError } = await supabase
+        .from('profiles')
+        .select('id')
+        .eq('user_id', session.user.id)
+        .maybeSingle()
+
+      if (profileError && profileError.code !== 'PGRST116') {
+        console.error('Error checking profile:', profileError)
+      }
+
+      if (!existingProfile) {
+        console.log('Creating profile for user...')
+        const { error: insertError } = await supabase
+          .from('profiles')
+          .upsert({
+            user_id: session.user.id,
+            full_name: session.user.user_metadata?.full_name || session.user.email,
+            username: session.user.email?.split('@')[0] || '',
+            role: 'client',
+          }, {
+            onConflict: 'user_id',
+            ignoreDuplicates: false,
+          })
+
+        if (insertError) {
+          console.error('Error creating profile:', insertError)
+        } else {
+          console.log('Profile created successfully')
+        }
+      }
+
+      setStatus('success')
+      
+      // Get next parameter or default to profile
+      const next = searchParams.get('next') || '/profile'
+      
+      // Wait for session to be fully persisted before redirect
+      setTimeout(() => {
+        router.push(next)
+        router.refresh()
+      }, 500)
     }
 
     handleCallback()
