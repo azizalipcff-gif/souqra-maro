@@ -2,8 +2,9 @@
 
 import { useState } from "react"
 import Link from "next/link"
+import { useRouter } from "next/navigation"
 import { motion } from "framer-motion"
-import { Mail, Lock, Eye, EyeOff, User, Phone, Store, MapPin, Loader2 } from "lucide-react"
+import { Mail, Lock, Eye, EyeOff, User, Phone, Store, MapPin, Loader2, AlertCircle } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
@@ -14,9 +15,11 @@ import { Footer } from "@/components/layout/footer"
 import { getSupabase } from "@/lib/supabase/client"
 
 export default function RegisterPage() {
+  const router = useRouter()
   const [showPassword, setShowPassword] = useState(false)
   const [showConfirmPassword, setShowConfirmPassword] = useState(false)
   const [isGoogleLoading, setIsGoogleLoading] = useState(false)
+  const [error, setError] = useState<string | null>(null)
   const [accountType, setAccountType] = useState<"customer" | "seller">("customer")
   const [formData, setFormData] = useState({
     name: "",
@@ -27,10 +30,44 @@ export default function RegisterPage() {
     location: "",
   })
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    // Handle registration logic here
-    console.log("Register:", { ...formData, accountType })
+
+    try {
+      setError(null)
+
+      // Validate passwords match
+      if (formData.password !== formData.confirmPassword) {
+        setError('Passwords do not match')
+        return
+      }
+
+      // Sign up with Supabase
+      const { data, error } = await getSupabase().auth.signUp({
+        email: formData.email,
+        password: formData.password,
+        options: {
+          data: {
+            full_name: formData.name,
+            phone: formData.phone,
+            location: formData.location,
+            account_type: accountType,
+          },
+        },
+      })
+
+      if (error) {
+        setError(error.message)
+        return
+      }
+
+      if (data.user) {
+        router.push('/auth/login?message=Please check your email to confirm your account')
+      }
+    } catch (err) {
+      console.error("Registration error:", err)
+      setError("Registration failed")
+    }
   }
 
   const handleGoogleLogin = async () => {

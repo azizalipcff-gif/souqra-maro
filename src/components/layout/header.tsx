@@ -40,18 +40,17 @@ export function Header() {
 
   const loadProfile = async () => {
     try {
-      const { data: { session } } = await getSupabase().auth.getSession()
-      if (!session) return
+      const { data: { user } } = await getSupabase().auth.getUser()
+      if (!user) return
 
-      const response = await fetch('/api/profiles', {
-        headers: {
-          Authorization: `Bearer ${session.access_token}`,
-        },
-      })
+      const { data: profile, error } = await getSupabase()
+        .from('profiles')
+        .select('id, user_id, full_name, username, phone, city, bio, avatar_url, role, created_at')
+        .eq('user_id', user.id)
+        .maybeSingle()
 
-      const data = await response.json()
-      if (data.profile) {
-        setProfile(data.profile)
+      if (profile) {
+        setProfile(profile)
       }
     } catch (error) {
       console.error('Profile load error:', error)

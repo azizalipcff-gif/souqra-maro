@@ -72,7 +72,7 @@ function AuthCallbackContent() {
         const { data: existingProfile, error: profileError } = await supabase
           .from('profiles')
           .select('id')
-          .eq('id', data.user.id)
+          .eq('user_id', data.user.id)
           .single()
 
         if (profileError && profileError.code !== 'PGRST116') {
@@ -84,7 +84,7 @@ function AuthCallbackContent() {
           const { error: insertError } = await supabase
             .from('profiles')
             .insert({
-              id: data.user.id,
+              user_id: data.user.id,
               full_name: data.user.user_metadata?.full_name || data.user.email,
               role: 'client',
             })

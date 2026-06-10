@@ -109,7 +109,6 @@ export default function ProfilePage() {
               user_id: user.id,
               full_name: user.email?.split('@')[0] || '',
               username: user.email?.split('@')[0] || '',
-              email: user.email,
             })
             .select()
             .single()
@@ -146,7 +145,6 @@ export default function ProfilePage() {
             user_id: user.id,
             full_name: user.email?.split('@')[0] || '',
             username: user.email?.split('@')[0] || '',
-            email: user.email,
           })
           .select()
           .single()
