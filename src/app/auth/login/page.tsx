@@ -50,7 +50,10 @@ function LoginForm() {
     if (data.user) {
       // Add delay to ensure session is properly set
       await new Promise(resolve => setTimeout(resolve, 500))
-      router.push("/")
+      
+      // Get next parameter or default to home
+      const next = searchParams.get('next') || '/'
+      router.push(next)
       router.refresh()
     }
   } catch (err) {

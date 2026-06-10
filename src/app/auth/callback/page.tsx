@@ -30,11 +30,24 @@ function AuthCallbackContent() {
           return
         }
 
-        // Get session from URL (OAuth callback)
-        const { data: { session }, error: sessionError } = await supabase.auth.getSession()
+        // Get code from URL (OAuth callback)
+        const code = searchParams.get('code')
+        
+        if (!code) {
+          console.error('No code in URL')
+          setError('no_code')
+          setStatus('error')
+          setTimeout(() => {
+            router.push('/auth/login?error=no_code')
+          }, 2000)
+          return
+        }
+
+        // Exchange code for session
+        const { data: { session }, error: sessionError } = await supabase.auth.exchangeCodeForSession(code)
         
         if (sessionError) {
-          console.error('Error getting session from URL:', sessionError)
+          console.error('Error exchanging code for session:', sessionError)
           setError(sessionError.message)
           setStatus('error')
           setTimeout(() => {
@@ -44,7 +57,7 @@ function AuthCallbackContent() {
         }
 
         if (!session?.user) {
-          console.error('No session found')
+          console.error('No session found after code exchange')
           setError('no_session')
           setStatus('error')
           setTimeout(() => {
@@ -55,7 +68,7 @@ function AuthCallbackContent() {
 
         console.log('Session created successfully for user:', session.user.id)
 
-        // Check if profile exists, create if not
+        // Check if profile exists, create if not using upsert to prevent duplicates
         const { data: existingProfile, error: profileError } = await supabase
           .from('profiles')
           .select('id')
@@ -70,11 +83,14 @@ function AuthCallbackContent() {
           console.log('Creating profile for user...')
           const { error: insertError } = await supabase
             .from('profiles')
-            .insert({
+            .upsert({
               user_id: session.user.id,
               full_name: session.user.user_metadata?.full_name || session.user.email,
               username: session.user.email?.split('@')[0] || '',
               role: 'client',
+            }, {
+              onConflict: 'user_id',
+              ignoreDuplicates: false,
             })
 
           if (insertError) {
@@ -89,6 +105,7 @@ function AuthCallbackContent() {
         // Get next parameter or default to profile
         const next = searchParams.get('next') || '/profile'
         
+        // Wait for session to be fully persisted before redirect
         setTimeout(() => {
           router.push(next)
           router.refresh()
