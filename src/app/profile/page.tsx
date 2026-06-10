@@ -59,7 +59,10 @@ export default function ProfilePage() {
         loadProfile(session?.user?.id || '', session?.user?.email)
       } else if (event === 'SIGNED_OUT') {
         setIsAuthenticated(false)
-        router.push('/auth/login?next=/profile')
+        setProfile(DEFAULT_PROFILE)
+        setError('You have been logged out')
+        setIsLoading(false)
+        // Do NOT redirect - let user stay on page with error message
       }
     })
 
@@ -76,7 +79,9 @@ export default function ProfilePage() {
       
       if (!session?.user) {
         setIsAuthenticated(false)
-        router.push("/auth/login?next=/profile")
+        setError('You need to be logged in to view your profile')
+        setIsLoading(false)
+        // Do NOT redirect - let user stay on page with error message
         return
       }
 
