@@ -291,7 +291,13 @@ export default function ProfilePage() {
         <Header />
         <div className="container mx-auto px-4 py-16">
           <div className="text-center">
-            <p className="text-gray-600">Redirecting to login...</p>
+            <p className="text-gray-600 mb-4">You need to be logged in to view your profile</p>
+            <button
+              onClick={() => router.push('/auth/login?next=/profile')}
+              className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+            >
+              Go to Login
+            </button>
           </div>
         </div>
         <Footer />
