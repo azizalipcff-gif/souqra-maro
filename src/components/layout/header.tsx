@@ -27,7 +27,7 @@ export function Header() {
     checkAuth()
 
     // Listen for auth state changes
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event: string, session: any) => {
       console.log('Auth state changed:', event, session?.user?.id)
       
       if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') {
