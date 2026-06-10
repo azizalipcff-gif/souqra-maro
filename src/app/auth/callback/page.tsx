@@ -31,7 +31,7 @@ function AuthCallbackContent() {
         }
 
         // Get session from URL (OAuth callback)
-        const { data, error: sessionError } = await supabase.auth.getSessionFromUrl()
+        const { data: { session }, error: sessionError } = await supabase.auth.getSession()
         
         if (sessionError) {
           console.error('Error getting session from URL:', sessionError)
@@ -43,7 +43,7 @@ function AuthCallbackContent() {
           return
         }
 
-        if (!data?.session?.user) {
+        if (!session?.user) {
           console.error('No session found')
           setError('no_session')
           setStatus('error')
@@ -53,13 +53,13 @@ function AuthCallbackContent() {
           return
         }
 
-        console.log('Session created successfully for user:', data.session.user.id)
+        console.log('Session created successfully for user:', session.user.id)
 
         // Check if profile exists, create if not
         const { data: existingProfile, error: profileError } = await supabase
           .from('profiles')
           .select('id')
-          .eq('user_id', data.session.user.id)
+          .eq('user_id', session.user.id)
           .maybeSingle()
 
         if (profileError && profileError.code !== 'PGRST116') {
@@ -71,9 +71,9 @@ function AuthCallbackContent() {
           const { error: insertError } = await supabase
             .from('profiles')
             .insert({
-              user_id: data.session.user.id,
-              full_name: data.session.user.user_metadata?.full_name || data.session.user.email,
-              username: data.session.user.email?.split('@')[0] || '',
+              user_id: session.user.id,
+              full_name: session.user.user_metadata?.full_name || session.user.email,
+              username: session.user.email?.split('@')[0] || '',
               role: 'client',
             })
 
