@@ -268,7 +268,10 @@ export default function ProfilePage() {
               <h1 className="text-3xl font-bold text-gray-900">My Profile</h1>
               <Button onClick={() => setIsEditing(true)}>Edit Profile</Button>
             </div>
-            <ProfileCard profile={profile} />
+            <ProfileCard 
+              profile={profile}
+              onEdit={() => setIsEditing(true)}
+            />
             
             <Card className="mt-6">
               <CardContent className="p-6">
