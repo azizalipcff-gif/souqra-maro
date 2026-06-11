@@ -252,7 +252,7 @@ export default function ProfilePage() {
               </button>
             </div>
             <AvatarUpload
-              currentAvatarUrl={profile.avatar_url}
+              currentAvatar={profile.avatar_url}
               onAvatarUpdate={handleAvatarUpdate}
               userId={user.id}
             />
