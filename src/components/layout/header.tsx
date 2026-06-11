@@ -10,86 +10,43 @@ import { Avatar } from "@/components/ui/avatar"
 import { Badge } from "@/components/ui/badge"
 import { DarkModeToggle } from "@/components/ui/dark-mode-toggle"
 import { useState, useEffect } from "react"
+import { useAuth } from "@/contexts/AuthContext"
 import { getSupabase } from "@/lib/supabase/client"
 
 export function Header() {
   const router = useRouter()
+  const { user, session, loading: authLoading, signOut } = useAuth()
   const [isMenuOpen, setIsMenuOpen] = useState(false)
   const [isDropdownOpen, setIsDropdownOpen] = useState(false)
-  const [isAuthenticated, setIsAuthenticated] = useState(false)
   const [profile, setProfile] = useState<any>(null)
-  const [isLoading, setIsLoading] = useState(true)
-
-  useEffect(() => {
-    const supabase = getSupabase()
-    
-    // Initial auth check
-    checkAuth()
-
-    // Listen for auth state changes
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((event: string, session: any) => {
-      console.log('Auth state changed:', event, session?.user?.id)
-      
-      // Handle INITIAL_SESSION - just log it, don't make decisions yet
-      if (event === 'INITIAL_SESSION') {
-        if (session?.user) {
-          setIsAuthenticated(true)
-          loadProfile()
-        }
-        // If no session in INITIAL_SESSION, wait for SIGNED_IN event
-        return
-      }
-      
-      if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') {
-        setIsAuthenticated(true)
-        loadProfile()
-      } else if (event === 'SIGNED_OUT') {
-        setIsAuthenticated(false)
-        setProfile(null)
-      }
-    })
-
-    return () => {
-      subscription.unsubscribe()
-    }
-  }, [])
-
-  const checkAuth = async () => {
-    try {
-      const { data: { session } } = await getSupabase().auth.getSession()
-      if (session) {
-        setIsAuthenticated(true)
-        await loadProfile()
-      }
-    } catch (error) {
-      console.error('Auth check error:', error)
-    } finally {
-      setIsLoading(false)
-    }
-  }
 
   const loadProfile = async () => {
-    try {
-      const { data: { user } } = await getSupabase().auth.getUser()
-      if (!user) return
+    if (!user) return
 
-      const { data: profile, error } = await getSupabase()
+    try {
+      const { data: profileData, error } = await getSupabase()
         .from('profiles')
         .select('id, user_id, full_name, username, phone, city, bio, avatar_url, role, created_at')
         .eq('user_id', user.id)
         .maybeSingle()
 
-      if (profile) {
-        setProfile(profile)
+      if (profileData) {
+        setProfile(profileData)
       }
     } catch (error) {
-      console.error('Profile load error:', error)
+      console.error('[Header] Profile load error:', error)
     }
   }
 
+  // Load profile when user is available
+  useEffect(() => {
+    if (user && !authLoading) {
+      loadProfile()
+    }
+  }, [user, authLoading])
+
   const handleLogout = async () => {
-    await getSupabase().auth.signOut()
-    setIsAuthenticated(false)
+    await signOut()
     setProfile(null)
     router.push('/')
   }
@@ -167,9 +124,9 @@ export function Header() {
             </Link>
 
             {/* User Account */}
-            {!isLoading && (
+            {!authLoading && (
               <>
-                {isAuthenticated ? (
+                {user ? (
                   <div className="relative">
                     <button
                       onClick={() => setIsDropdownOpen(!isDropdownOpen)}
@@ -185,7 +142,7 @@ export function Header() {
                         <Avatar className="w-8 h-8" />
                       )}
                       <span className="hidden md:block text-sm font-medium">
-                        {profile?.username || profile?.full_name || 'User'}
+                        {profile?.username || profile?.full_name || user.email?.split('@')[0] || 'User'}
                       </span>
                       <ChevronDown className="h-4 w-4" />
                     </button>
@@ -284,7 +241,7 @@ export function Header() {
                   className="pl-10"
                 />
               </div>
-              {!isLoading && !isAuthenticated && (
+              {!authLoading && !user && (
                 <div className="flex flex-col space-y-2 pt-4 border-t border-white/20">
                   <Link href="/auth/login">
                     <Button variant="outline" className="w-full">
