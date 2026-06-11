@@ -18,7 +18,13 @@ export const getSupabase = () => {
   
   // Client-side: use singleton with cookie storage
   if (!supabaseInstance) {
-    supabaseInstance = createBrowserClient(supabaseUrl, supabaseAnonKey)
+    supabaseInstance = createBrowserClient(supabaseUrl, supabaseAnonKey, {
+      auth: {
+        persistSession: true,
+        autoRefreshToken: true,
+        detectSessionInUrl: false,
+      },
+    })
   }
   
   return supabaseInstance

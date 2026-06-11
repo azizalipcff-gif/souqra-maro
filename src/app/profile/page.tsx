@@ -54,6 +54,27 @@ export default function ProfilePage() {
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event: string, session: any) => {
       console.log('Profile page auth state changed:', event, session?.user?.id)
       
+      // Handle INITIAL_SESSION - wait for it to resolve
+      if (event === 'INITIAL_SESSION') {
+        if (session?.user) {
+          setIsAuthenticated(true)
+          loadProfile(session.user.id, session.user.email)
+        } else {
+          // If INITIAL_SESSION has no user, wait a bit and check again
+          setTimeout(async () => {
+            const { data: { session: retrySession } } = await supabase.auth.getSession()
+            if (retrySession?.user) {
+              setIsAuthenticated(true)
+              loadProfile(retrySession.user.id, retrySession.user.email)
+            } else {
+              setIsAuthenticated(false)
+              setIsLoading(false)
+            }
+          }, 500)
+        }
+        return
+      }
+      
       if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') {
         setIsAuthenticated(true)
         loadProfile(session?.user?.id || '', session?.user?.email)
