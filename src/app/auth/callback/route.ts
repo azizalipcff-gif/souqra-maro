@@ -5,66 +5,75 @@ import { cookies } from 'next/headers'
 export async function GET(request: Request) {
   const requestUrl = new URL(request.url)
   const code = requestUrl.searchParams.get('code')
-  const next = requestUrl.searchParams.get('next') || '/'
+  const next = requestUrl.searchParams.get('next') || '/profile'
 
-  if (code) {
-    const cookieStore = await cookies()
-    const supabase = createServerClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-      {
-        cookies: {
-          get(name: string) {
-            return cookieStore.get(name)?.value
-          },
-          set(name: string, value: string, options: any) {
-            cookieStore.set({ name, value, ...options })
-          },
-          remove(name: string, options: any) {
-            cookieStore.set({ name, value: '', ...options })
-          },
-        },
-      }
+  if (!code) {
+    return NextResponse.redirect(
+      new URL('/auth/login?error=missing_code', requestUrl)
     )
+  }
 
-    const { data: { session }, error } = await supabase.auth.exchangeCodeForSession(code)
+  const cookieStore = await cookies()
+  const response = NextResponse.redirect(new URL(next, requestUrl))
 
-    if (error) {
-      console.error('Error exchanging code for session:', error)
-      return NextResponse.redirect(new URL('/auth/login?error=' + encodeURIComponent(error.message), requestUrl))
-    }
-
-    if (session?.user) {
-      // Create profile if it doesn't exist using upsert to prevent duplicates
-      const { data: existingProfile, error: profileError } = await supabase
-        .from('profiles')
-        .select('id')
-        .eq('user_id', session.user.id)
-        .maybeSingle()
-
-      if (profileError && profileError.code !== 'PGRST116') {
-        console.error('Error checking profile:', profileError)
-      }
-
-      if (!existingProfile) {
-        const { error: insertError } = await supabase
-          .from('profiles')
-          .upsert({
-            user_id: session.user.id,
-            full_name: session.user.user_metadata?.full_name || session.user.email,
-            username: session.user.email?.split('@')[0] || '',
-            role: 'client',
-          }, {
-            onConflict: 'user_id',
-            ignoreDuplicates: false,
+  const supabase = createServerClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    {
+      cookies: {
+        getAll() {
+          return cookieStore.getAll()
+        },
+        setAll(cookiesToSet) {
+          cookiesToSet.forEach(({ name, value, options }) => {
+            response.cookies.set({
+              name,
+              value,
+              ...options,
+            })
           })
+        },
+      },
+    }
+  )
 
-        if (insertError) {
-          console.error('Error creating profile:', insertError)
-        }
+  const { data: { session }, error } = await supabase.auth.exchangeCodeForSession(code)
+
+  if (error) {
+    return NextResponse.redirect(
+      new URL(
+        '/auth/login?error=' + encodeURIComponent(error.message),
+        requestUrl
+      )
+    )
+  }
+
+  // Create profile if it doesn't exist
+  if (session?.user) {
+    const { data: existingProfile } = await supabase
+      .from('profiles')
+      .select('id')
+      .eq('user_id', session.user.id)
+      .maybeSingle()
+
+    if (!existingProfile) {
+      const { error: insertError } = await supabase
+        .from('profiles')
+        .upsert({
+          user_id: session.user.id,
+          full_name: session.user.user_metadata?.full_name || session.user.email,
+          username: session.user.email?.split('@')[0] || '',
+          role: 'client',
+        }, {
+          onConflict: 'user_id',
+          ignoreDuplicates: false,
+        })
+
+      if (insertError) {
+        console.error('Error creating profile:', insertError)
       }
     }
   }
 
-  return NextResponse.redirect(new URL(next, requestUrl))
+  return response
 }
