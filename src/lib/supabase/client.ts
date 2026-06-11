@@ -1,5 +1,4 @@
 import { createBrowserClient } from '@supabase/ssr'
-import { createClient } from '@supabase/supabase-js'
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
 const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
@@ -13,27 +12,32 @@ let supabaseInstance: ReturnType<typeof createBrowserClient> | null = null
 
 export const getSupabase = () => {
   if (typeof window === 'undefined') {
-    // Server-side: create new instance each time (for SSR safety)
-    return createClient(supabaseUrl, supabaseAnonKey)
+    // Server-side: should not be called, but return null for safety
+    return null
   }
   
-  // Client-side: use singleton with proper auth configuration
+  // Client-side: use singleton with cookie-compatible storage for PKCE
   if (!supabaseInstance) {
     supabaseInstance = createBrowserClient(supabaseUrl, supabaseAnonKey, {
       auth: {
         persistSession: true,
         autoRefreshToken: true,
-        detectSessionInUrl: false,
+        detectSessionInUrl: true,
         storage: {
           getItem: (key: string) => {
-            const item = localStorage.getItem(key)
-            return item ? JSON.parse(item) : null
+            if (typeof document === 'undefined') return null
+            const item = document.cookie
+              .split('; ')
+              .find((row) => row.startsWith(`${key}=`))
+            return item ? decodeURIComponent(item.split('=')[1]) : null
           },
-          setItem: (key: string, value: any) => {
-            localStorage.setItem(key, JSON.stringify(value))
+          setItem: (key: string, value: string) => {
+            if (typeof document === 'undefined') return
+            document.cookie = `${key}=${encodeURIComponent(value)}; path=/; max-age=31536000; SameSite=Lax`
           },
           removeItem: (key: string) => {
-            localStorage.removeItem(key)
+            if (typeof document === 'undefined') return
+            document.cookie = `${key}=; path=/; max-age=-1`
           },
         },
       },

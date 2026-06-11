@@ -21,7 +21,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     const supabase = getSupabase()
-    if (!supabase) return
+    if (!supabase) {
+      setLoading(false)
+      return
+    }
 
     console.log('[AuthContext] Initializing auth state')
 
