@@ -252,8 +252,8 @@ export default function ProfilePage() {
               </button>
             </div>
             <AvatarUpload
-              currentAvatar={profile.avatar_url}
-              onAvatarUpdate={handleAvatarUpdate}
+              currentAvatar={profile.avatar_url || null}
+              onAvatarChange={handleAvatarUpdate}
               userId={user.id}
             />
             <EditProfileForm
