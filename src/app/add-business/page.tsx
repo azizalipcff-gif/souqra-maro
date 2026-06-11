@@ -68,17 +68,30 @@ export default function AddBusinessPage() {
     try {
       console.log("=== ADD BUSINESS AUTH CHECK ===")
       const supabase = getSupabase()
-      const { data } = await supabase.auth.getSession()
-      const session = data?.session
+      
+      // Wait for session to be available
+      let retries = 0
+      let session = null
+      
+      while (retries < 3 && !session) {
+        const { data } = await supabase.auth.getSession()
+        session = data?.session
+        if (!session) {
+          await new Promise(resolve => setTimeout(resolve, 200))
+          retries++
+        }
+      }
       
       console.log("Session:", session)
       console.log("Session user:", session?.user)
       console.log("User ID:", session?.user?.id)
       
       if (!session?.user) {
-        console.log("No authenticated user found")
+        console.log("No authenticated user found after retries")
         setIsAuthenticated(false)
-        router.push("/login?next=/add-business")
+        setIsLoading(false)
+        // Do NOT redirect aggressively - show error message instead
+        setError('You need to be logged in to add a business')
         return
       }
 
@@ -88,7 +101,8 @@ export default function AddBusinessPage() {
     } catch (error) {
       console.error('Auth check error:', error)
       setIsAuthenticated(false)
-      router.push("/login?next=/add-business")
+      setIsLoading(false)
+      setError('Authentication error')
     } finally {
       setIsLoading(false)
     }
