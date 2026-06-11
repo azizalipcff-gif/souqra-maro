@@ -48,30 +48,21 @@ export async function GET(request: Request) {
     )
   }
 
-  // Create profile if it doesn't exist
+  // ❌ IMPORTANT: profiles fix (NO email column)
   if (session?.user) {
-    const { data: existingProfile } = await supabase
+    const { data: existing } = await supabase
       .from('profiles')
-      .select('id')
+      .select('user_id')
       .eq('user_id', session.user.id)
       .maybeSingle()
 
-    if (!existingProfile) {
-      const { error: insertError } = await supabase
-        .from('profiles')
-        .upsert({
-          user_id: session.user.id,
-          full_name: session.user.user_metadata?.full_name || session.user.email,
-          username: session.user.email?.split('@')[0] || '',
-          role: 'client',
-        }, {
-          onConflict: 'user_id',
-          ignoreDuplicates: false,
-        })
-
-      if (insertError) {
-        console.error('Error creating profile:', insertError)
-      }
+    if (!existing) {
+      await supabase.from('profiles').insert({
+        user_id: session.user.id,
+        full_name: session.user.user_metadata?.full_name || '',
+        username: session.user.email?.split('@')[0] || '',
+        role: 'client',
+      })
     }
   }
 
