@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback } from "react"
 import { useRouter } from "next/navigation"
-import { Loader2, TrendingUp, ArrowRight } from "lucide-react"
+import { Loader2, ArrowRight } from "lucide-react"
 import { Header } from "@/components/layout/header"
 import { Footer } from "@/components/layout/footer"
 import ProfileCard from "@/components/profile/ProfileCard"
@@ -38,24 +38,27 @@ const DEFAULT_PROFILE: Profile = {
 
 export default function ProfilePage() {
   const router = useRouter()
-  const { user, session, loading: authLoading } = useAuth()
+  const { user, session, loading: authLoading, initialized } = useAuth()
   const [isLoading, setIsLoading] = useState(true)
   const [isEditing, setIsEditing] = useState(false)
   const [profile, setProfile] = useState<Profile>(DEFAULT_PROFILE)
   const [error, setError] = useState("")
   const [success, setSuccess] = useState("")
 
-  const loadProfile = useCallback(async () => {
-    if (!user) {
-      console.log('[ProfilePage] No user to load profile for')
-      return
+  // Redirect if not authenticated
+  useEffect(() => {
+    if (initialized && !authLoading && !user) {
+      router.push('/auth/login?next=/profile')
     }
+  }, [user, authLoading, initialized, router])
+
+  const loadProfile = useCallback(async () => {
+    if (!user) return
 
     try {
       setIsLoading(true)
       const supabase = getSupabase()
-      
-      console.log('[ProfilePage] Loading profile for user:', user.id)
+      if (!supabase) return
       
       const { data, error } = await supabase
         .from('profiles')
@@ -63,161 +66,102 @@ export default function ProfilePage() {
         .eq('user_id', user.id)
         .maybeSingle()
 
-      console.log('[ProfilePage] Profile data:', data)
-      console.log('[ProfilePage] Profile error:', error)
-
       if (error) {
-        // If profile doesn't exist, create a default one
         if (error.code === 'PGRST116') {
-          console.log('[ProfilePage] Profile does not exist, creating default profile')
-          const defaultProfile = {
-            user_id: user.id,
-            full_name: user.user_metadata?.full_name || user.email,
-            username: user.email?.split('@')[0] || '',
-            avatar_url: user.user_metadata?.avatar_url || null,
-            email: user.email,
-          }
-          
-          const { error: insertError } = await supabase
-            .from('profiles')
-            .upsert(defaultProfile, {
-              onConflict: 'user_id',
-              ignoreDuplicates: false,
-            })
-
-          if (insertError) {
-            console.error('[ProfilePage] Error creating profile:', insertError)
-            setError('Failed to create profile')
-          } else {
-            console.log('[ProfilePage] Default profile created')
-            setProfile(defaultProfile as Profile)
-          }
+          setProfile(DEFAULT_PROFILE)
         } else {
-          console.error('[ProfilePage] Error loading profile:', error)
           setError('Failed to load profile')
         }
       } else if (data) {
-        console.log('[ProfilePage] Profile loaded successfully')
         setProfile(data)
-      } else {
-        console.log('[ProfilePage] No profile found, creating default')
-        const defaultProfile = {
-          user_id: user.id,
-          full_name: user.user_metadata?.full_name || user.email,
-          username: user.email?.split('@')[0] || '',
-          avatar_url: user.user_metadata?.avatar_url || null,
-          email: user.email,
-        }
-        
-        const { error: insertError } = await supabase
-          .from('profiles')
-          .upsert(defaultProfile, {
-            onConflict: 'user_id',
-            ignoreDuplicates: false,
-          })
-
-        if (insertError) {
-          console.error('[ProfilePage] Error creating profile:', insertError)
-          setError('Failed to create profile')
-        } else {
-          console.log('[ProfilePage] Default profile created')
-          setProfile(defaultProfile as Profile)
-        }
       }
-    } catch (error) {
-      console.error('[ProfilePage] Error in loadProfile:', error)
-      setError('An error occurred while loading your profile')
+    } catch (err) {
+      setError('Failed to load profile')
     } finally {
       setIsLoading(false)
     }
   }, [user])
 
   useEffect(() => {
-    console.log('[ProfilePage] Auth state:', { user: user?.id, session: session?.user?.id, authLoading })
-
-    if (user && !authLoading) {
+    if (user && initialized) {
       loadProfile()
     }
-  }, [user, authLoading, loadProfile])
+  }, [user, initialized, loadProfile])
 
-  const handleAvatarUpdate = (avatarUrl: string) => {
-    setProfile(prev => ({ ...prev, avatar_url: avatarUrl }))
-    setSuccess('Avatar updated successfully')
-    setTimeout(() => setSuccess(''), 3000)
-  }
-
-  const handleSaveProfile = async (updatedProfile: Profile) => {
+  const handleAvatarUpdate = async (avatarUrl: string) => {
     try {
       const supabase = getSupabase()
-      
+      if (!supabase) return
+
       const { error } = await supabase
         .from('profiles')
-        .update(updatedProfile)
-        .eq('user_id', user?.id)
+        .update({ avatar_url: avatarUrl })
+        .eq('user_id', user!.id)
 
-      if (error) {
-        console.error('[ProfilePage] Error saving profile:', error)
-        setError('Failed to save profile')
-      } else {
-        console.log('[ProfilePage] Profile saved successfully')
-        setProfile(updatedProfile)
-        setSuccess('Profile updated successfully')
-        setIsEditing(false)
-        setTimeout(() => setSuccess(''), 3000)
-      }
-    } catch (error) {
-      console.error('[ProfilePage] Error in handleSaveProfile:', error)
-      setError('An error occurred while saving your profile')
+      if (error) throw error
+
+      setProfile({ ...profile, avatar_url })
+      setSuccess('Avatar updated successfully')
+      setTimeout(() => setSuccess(''), 3000)
+    } catch (err) {
+      setError('Failed to update avatar')
     }
   }
 
-  // Show loading screen while auth is initializing
-  if (authLoading) {
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-white via-blue-50 to-white flex items-center justify-center">
-        <div className="text-center">
-          <Loader2 className="h-12 w-12 animate-spin text-blue-600 mx-auto mb-4" />
-          <p className="text-gray-600">Loading...</p>
-        </div>
-      </div>
-    )
+  const handleProfileSave = async (updatedProfile: Profile) => {
+    try {
+      const supabase = getSupabase()
+      if (!supabase) return
+
+      const { error } = await supabase
+        .from('profiles')
+        .upsert({
+          user_id: user!.id,
+          ...updatedProfile,
+        }, {
+          onConflict: 'user_id',
+        })
+
+      if (error) throw error
+
+      setProfile(updatedProfile)
+      setIsEditing(false)
+      setSuccess('Profile updated successfully')
+      setTimeout(() => setSuccess(''), 3000)
+    } catch (err) {
+      setError('Failed to update profile')
+    }
   }
 
-  // Show error if not authenticated
-  if (!user) {
+  // Show loading state while auth is initializing
+  if (authLoading || !initialized) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-white via-blue-50 to-white">
         <Header />
-        <div className="container mx-auto px-4 py-16">
-          <div className="text-center">
-            <p className="text-gray-600 mb-4">{error || 'You need to be logged in to view your profile'}</p>
-            <button
-              onClick={() => router.push('/auth/login?next=/profile')}
-              className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
-            >
-              Go to Login
-            </button>
-          </div>
+        <div className="container mx-auto px-4 py-12 flex items-center justify-center">
+          <Loader2 className="h-8 w-8 animate-spin text-blue-600" />
         </div>
         <Footer />
       </div>
     )
   }
 
-  // Show loading screen while profile is loading
+  // Show loading state while profile is loading
   if (isLoading) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-white via-blue-50 to-white">
         <Header />
-        <div className="container mx-auto px-4 py-16">
-          <div className="text-center">
-            <Loader2 className="h-12 w-12 animate-spin text-blue-600 mx-auto mb-4" />
-            <p className="text-gray-600">Loading your profile...</p>
-          </div>
+        <div className="container mx-auto px-4 py-12 flex items-center justify-center">
+          <Loader2 className="h-8 w-8 animate-spin text-blue-600" />
         </div>
         <Footer />
       </div>
     )
+  }
+
+  // Show error if no user
+  if (!user) {
+    return null // Will redirect by useEffect
   }
 
   return (
@@ -253,7 +197,7 @@ export default function ProfilePage() {
             />
             <EditProfileForm
               profile={profile}
-              onSave={handleSaveProfile}
+              onSave={handleProfileSave}
               onCancel={() => setIsEditing(false)}
             />
           </div>

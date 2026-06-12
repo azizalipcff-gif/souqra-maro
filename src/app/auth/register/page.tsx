@@ -4,7 +4,7 @@ import { useState } from "react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { motion } from "framer-motion"
-import { Mail, Lock, Eye, EyeOff, User, Phone, Store, MapPin, Loader2, AlertCircle } from "lucide-react"
+import { Mail, Lock, Eye, EyeOff, User, Phone, MapPin, Loader2, AlertCircle } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
@@ -13,12 +13,15 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Header } from "@/components/layout/header"
 import { Footer } from "@/components/layout/footer"
 import { getSupabase } from "@/lib/supabase/client"
+import { useAuth } from "@/contexts/AuthContext"
 
 export default function RegisterPage() {
   const router = useRouter()
+  const { user, loading: authLoading } = useAuth()
   const [showPassword, setShowPassword] = useState(false)
   const [showConfirmPassword, setShowConfirmPassword] = useState(false)
   const [isGoogleLoading, setIsGoogleLoading] = useState(false)
+  const [isSubmitting, setIsSubmitting] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [accountType, setAccountType] = useState<"customer" | "seller">("customer")
   const [formData, setFormData] = useState({
@@ -30,20 +33,35 @@ export default function RegisterPage() {
     location: "",
   })
 
+  // Redirect if already logged in
+  useState(() => {
+    if (user && !authLoading) {
+      router.push('/profile')
+    }
+  })
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
+    setIsSubmitting(true)
+    setError(null)
 
     try {
-      setError(null)
+      const supabase = getSupabase()
+      if (!supabase) {
+        setError('Authentication service unavailable')
+        setIsSubmitting(false)
+        return
+      }
 
       // Validate passwords match
       if (formData.password !== formData.confirmPassword) {
         setError('Passwords do not match')
+        setIsSubmitting(false)
         return
       }
 
       // Sign up with Supabase
-      const { data, error } = await getSupabase().auth.signUp({
+      const { data, error } = await supabase.auth.signUp({
         email: formData.email,
         password: formData.password,
         options: {
@@ -52,21 +70,25 @@ export default function RegisterPage() {
             phone: formData.phone,
             location: formData.location,
             account_type: accountType,
+            role: accountType === 'seller' ? 'business_owner' : 'client',
           },
         },
       })
 
       if (error) {
         setError(error.message)
+        setIsSubmitting(false)
         return
       }
 
       if (data.user) {
+        // Profile will be created automatically by auth callback
         router.push('/auth/login?message=Please check your email to confirm your account')
       }
     } catch (err) {
       console.error("Registration error:", err)
       setError("Registration failed")
+      setIsSubmitting(false)
     }
   }
 
@@ -75,8 +97,15 @@ export default function RegisterPage() {
     setError(null)
 
     try {
+      const supabase = getSupabase()
+      if (!supabase) {
+        setError('Authentication service unavailable')
+        setIsGoogleLoading(false)
+        return
+      }
+
       const origin = typeof window !== 'undefined' ? window.location.origin : (process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000')
-      const { data, error } = await getSupabase().auth.signInWithOAuth({
+      const { data, error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
         options: {
           redirectTo: `${origin}/auth/callback`,

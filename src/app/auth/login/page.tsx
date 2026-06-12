@@ -4,7 +4,7 @@ import { useState, useEffect, Suspense } from "react"
 import Link from "next/link"
 import { useRouter, useSearchParams } from "next/navigation"
 import { motion } from "framer-motion"
-import { Mail, Lock, Eye, EyeOff, Store, User, Loader2, AlertCircle } from "lucide-react"
+import { Mail, Lock, Eye, EyeOff, Loader2, AlertCircle } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
@@ -12,12 +12,15 @@ import { Label } from "@/components/ui/label"
 import { Header } from "@/components/layout/header"
 import { Footer } from "@/components/layout/footer"
 import { getSupabase } from "@/lib/supabase/client"
+import { useAuth } from "@/contexts/AuthContext"
 
 function LoginForm() {
   const router = useRouter()
   const searchParams = useSearchParams()
+  const { user, loading: authLoading } = useAuth()
   const [showPassword, setShowPassword] = useState(false)
   const [isGoogleLoading, setIsGoogleLoading] = useState(false)
+  const [isSubmitting, setIsSubmitting] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [formData, setFormData] = useState({
     email: "",
@@ -31,44 +34,64 @@ function LoginForm() {
     }
   }, [searchParams])
 
-  const handleSubmit = async (e: React.FormEvent) => {
-  e.preventDefault()
+  // Redirect if already logged in
+  useEffect(() => {
+    if (user && !authLoading) {
+      const next = searchParams.get('next') || '/profile'
+      router.push(next)
+    }
+  }, [user, authLoading, router, searchParams])
 
-  try {
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+    setIsSubmitting(true)
     setError(null)
 
-    const { data, error } = await getSupabase().auth.signInWithPassword({
-      email: formData.email,
-      password: formData.password,
-    })
+    try {
+      const supabase = getSupabase()
+      if (!supabase) {
+        setError('Authentication service unavailable')
+        setIsSubmitting(false)
+        return
+      }
 
-    if (error) {
-      setError(error.message)
-      return
-    }
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email: formData.email,
+        password: formData.password,
+      })
 
-    if (data.user) {
-      // Add delay to ensure session is properly set
-      await new Promise(resolve => setTimeout(resolve, 500))
-      
-      // Get next parameter or default to home
-      const next = searchParams.get('next') || '/'
-      router.push(next)
-      router.refresh()
+      if (error) {
+        setError(error.message)
+        setIsSubmitting(false)
+        return
+      }
+
+      if (data.user) {
+        // Session will be handled by AuthContext
+        const next = searchParams.get('next') || '/profile'
+        router.push(next)
+      }
+    } catch (err) {
+      console.error("Login error:", err)
+      setError("Login failed")
+      setIsSubmitting(false)
     }
-  } catch (err) {
-    console.error("Login error:", err)
-    setError("Login failed")
   }
-}
 
   const handleGoogleLogin = async () => {
     setIsGoogleLoading(true)
     setError(null)
 
     try {
+      const supabase = getSupabase()
+      if (!supabase) {
+        setError('Authentication service unavailable')
+        setIsGoogleLoading(false)
+        return
+      }
+
       const origin = typeof window !== 'undefined' ? window.location.origin : (process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000')
-      const { data, error } = await getSupabase().auth.signInWithOAuth({
+      const { data, error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
         options: {
           redirectTo: `${origin}/auth/callback`,

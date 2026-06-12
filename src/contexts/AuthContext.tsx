@@ -8,8 +8,8 @@ interface AuthContextType {
   user: User | null
   session: Session | null
   loading: boolean
+  initialized: boolean
   signOut: () => Promise<void>
-  refreshSession: () => Promise<void>
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined)
@@ -18,59 +18,72 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null)
   const [session, setSession] = useState<Session | null>(null)
   const [loading, setLoading] = useState(true)
+  const [initialized, setInitialized] = useState(false)
 
   useEffect(() => {
-    let isMounted = true
     const supabase = getSupabase()
-
     if (!supabase) {
       setLoading(false)
-      return () => {
-        isMounted = false
-      }
+      setInitialized(true)
+      return
     }
 
+    let mounted = true
+
+    // Get initial session
     const initializeAuth = async () => {
       try {
-        const { data: { session: initialSession }, error } = await supabase.auth.getSession()
-        if (!isMounted) return
-
-        if (error) {
-          console.error('[AuthContext] Error getting initial session:', error)
-        } else {
+        const { data: { session: initialSession } } = await supabase.auth.getSession()
+        
+        if (mounted) {
           setSession(initialSession)
           setUser(initialSession?.user ?? null)
+          setInitialized(true)
+          setLoading(false)
         }
       } catch (error) {
         console.error('[AuthContext] Error initializing auth:', error)
-      } finally {
-        if (isMounted) setLoading(false)
+        if (mounted) {
+          setInitialized(true)
+          setLoading(false)
+        }
       }
     }
 
     initializeAuth()
 
+    // Listen for auth state changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      (event: string, nextSession: Session | null) => {
-        if (!isMounted) return
-        setSession(nextSession)
-        setUser(nextSession?.user ?? null)
-        setLoading(false)
+      (event: string, session: Session | null) => {
+        if (!mounted) return
+
+        console.log('[AuthContext] Auth state changed:', event, session?.user?.id)
+        
+        setSession(session)
+        setUser(session?.user ?? null)
+        
+        if (event === 'INITIAL_SESSION') {
+          setInitialized(true)
+          setLoading(false)
+        } else if (event === 'SIGNED_IN') {
+          setLoading(false)
+        } else if (event === 'SIGNED_OUT') {
+          setLoading(false)
+        }
       }
     )
 
     return () => {
-      isMounted = false
+      mounted = false
       subscription.unsubscribe()
     }
   }, [])
 
   const signOut = async () => {
-    try {
-      const supabase = getSupabase()
-      if (!supabase) return
+    const supabase = getSupabase()
+    if (!supabase) return
 
-      console.log('[AuthContext] Signing out user')
+    try {
       await supabase.auth.signOut()
       setUser(null)
       setSession(null)
@@ -79,32 +92,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   }
 
-  const refreshSession = async () => {
-    try {
-      const supabase = getSupabase()
-      if (!supabase) return
-
-      console.log('[AuthContext] Refreshing session')
-      const { data: { session: refreshedSession }, error } = await supabase.auth.refreshSession()
-      
-      if (error) {
-        console.error('[AuthContext] Error refreshing session:', error)
-      } else {
-        console.log('[AuthContext] Session refreshed:', refreshedSession?.user?.id)
-        setSession(refreshedSession)
-        setUser(refreshedSession?.user ?? null)
-      }
-    } catch (error) {
-      console.error('[AuthContext] Error refreshing session:', error)
-    }
-  }
-
   const value = {
     user,
     session,
     loading,
+    initialized,
     signOut,
-    refreshSession,
   }
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>

@@ -24,7 +24,10 @@ export function Header() {
     if (!user) return
 
     try {
-      const { data: profileData, error } = await getSupabase()
+      const supabase = getSupabase()
+      if (!supabase) return
+
+      const { data: profileData, error } = await supabase
         .from('profiles')
         .select('id, user_id, full_name, username, phone, city, bio, avatar_url, role, created_at')
         .eq('user_id', user.id)
