@@ -100,7 +100,7 @@ export default function ProfilePage() {
 
       if (error) throw error
 
-      setProfile({ ...profile, avatar_url })
+      setProfile({ ...profile, avatar_url: avatarUrl })
       setSuccess('Avatar updated successfully')
       setTimeout(() => setSuccess(''), 3000)
     } catch (err) {
