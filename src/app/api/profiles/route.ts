@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createRouteHandlerClient } from '@/lib/supabase/server'
+import { normalizeRole } from '@/lib/auth/roles'
 
 export async function GET(request: NextRequest) {
   try {
@@ -46,14 +47,14 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json()
-    const { full_name } = body
+    const { full_name, role } = body
 
     const { data: profile, error } = await supabase
       .from('profiles')
       .insert({
         user_id: user.id,
         full_name,
-        role: 'client',
+        role: normalizeRole(role) === 'seller' ? 'business_owner' : normalizeRole(role) === 'business' ? 'business_owner' : 'client',
       })
       .select('id, full_name, role, created_at')
       .maybeSingle()

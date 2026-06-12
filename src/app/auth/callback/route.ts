@@ -48,22 +48,17 @@ export async function GET(request: Request) {
     )
   }
 
-  // ❌ IMPORTANT: profiles fix (NO email column)
   if (session?.user) {
-    const { data: existing } = await supabase
-      .from('profiles')
-      .select('user_id')
-      .eq('user_id', session.user.id)
-      .maybeSingle()
-
-    if (!existing) {
-      await supabase.from('profiles').insert({
-        user_id: session.user.id,
-        full_name: session.user.user_metadata?.full_name || '',
-        username: session.user.email?.split('@')[0] || '',
-        role: 'client',
-      })
+    const role = (session.user.user_metadata?.role as string | undefined) || 'user'
+    const profilePayload = {
+      user_id: session.user.id,
+      full_name: session.user.user_metadata?.full_name || session.user.email || 'User',
+      username: session.user.user_metadata?.username || session.user.email?.split('@')[0] || `user-${session.user.id.slice(0, 8)}`,
+      avatar_url: session.user.user_metadata?.avatar_url || null,
+      role: role === 'seller' ? 'business_owner' : role === 'business' ? 'business_owner' : 'client',
     }
+
+    await supabase.from('profiles').upsert(profilePayload, { onConflict: 'user_id', ignoreDuplicates: false })
   }
 
   return response

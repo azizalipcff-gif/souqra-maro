@@ -20,61 +20,47 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
+    let isMounted = true
     const supabase = getSupabase()
+
     if (!supabase) {
       setLoading(false)
-      return
+      return () => {
+        isMounted = false
+      }
     }
 
-    console.log('[AuthContext] Initializing auth state')
-
-    // Get initial session
     const initializeAuth = async () => {
       try {
-        console.log('[AuthContext] Getting initial session')
         const { data: { session: initialSession }, error } = await supabase.auth.getSession()
-        
+        if (!isMounted) return
+
         if (error) {
           console.error('[AuthContext] Error getting initial session:', error)
         } else {
-          console.log('[AuthContext] Initial session:', initialSession?.user?.id)
           setSession(initialSession)
           setUser(initialSession?.user ?? null)
         }
       } catch (error) {
         console.error('[AuthContext] Error initializing auth:', error)
       } finally {
-        setLoading(false)
+        if (isMounted) setLoading(false)
       }
     }
 
     initializeAuth()
 
-    // Listen for auth state changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      (event: string, session: Session | null) => {
-        console.log('[AuthContext] Auth state changed:', event, session?.user?.id)
-        
-        setSession(session)
-        setUser(session?.user ?? null)
-        
-        if (event === 'SIGNED_IN') {
-          console.log('[AuthContext] User signed in:', session?.user?.id)
-          setLoading(false)
-        } else if (event === 'SIGNED_OUT') {
-          console.log('[AuthContext] User signed out')
-          setLoading(false)
-        } else if (event === 'TOKEN_REFRESHED') {
-          console.log('[AuthContext] Token refreshed')
-        } else if (event === 'INITIAL_SESSION') {
-          console.log('[AuthContext] Initial session loaded:', session?.user?.id)
-          setLoading(false)
-        }
+      (event: string, nextSession: Session | null) => {
+        if (!isMounted) return
+        setSession(nextSession)
+        setUser(nextSession?.user ?? null)
+        setLoading(false)
       }
     )
 
     return () => {
-      console.log('[AuthContext] Cleaning up auth subscription')
+      isMounted = false
       subscription.unsubscribe()
     }
   }, [])
