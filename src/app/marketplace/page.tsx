@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useCallback } from "react"
 import Link from "next/link"
 import { motion } from "framer-motion"
 import { Search, SlidersHorizontal, Grid, List, Heart, MapPin, Star, Loader2, Store } from "lucide-react"
@@ -42,7 +42,17 @@ const CATEGORIES = [
 ]
 
 export default function MarketplacePage() {
-  const [businesses, setBusinesses] = useState<any[]>([])
+  interface MarketplaceBusiness {
+    id: string
+    business_name: string
+    category: string
+    city: string
+    description?: string
+    cover_url?: string | null
+    logo_url?: string | null
+  }
+
+  const [businesses, setBusinesses] = useState<MarketplaceBusiness[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [searchQuery, setSearchQuery] = useState("")
   const [selectedCategory, setSelectedCategory] = useState("All Categories")
@@ -50,11 +60,7 @@ export default function MarketplacePage() {
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid")
   const [showFilters, setShowFilters] = useState(false)
 
-  useEffect(() => {
-    loadBusinesses()
-  }, [selectedCategory, selectedLocation, searchQuery])
-
-  const loadBusinesses = async () => {
+  const loadBusinesses = useCallback(async () => {
     setIsLoading(true)
     try {
       const response = await fetch('/api/businesses/public?limit=100')
@@ -62,18 +68,18 @@ export default function MarketplacePage() {
 
       if (businesses) {
         // Filter on client side for now
-        let filtered = businesses
-        
+        let filtered: MarketplaceBusiness[] = businesses
+
         if (selectedCategory !== "All Categories") {
-          filtered = filtered.filter((b: any) => b.category === selectedCategory)
+          filtered = filtered.filter((b) => b.category === selectedCategory)
         }
-        
+
         if (selectedLocation !== "All Morocco") {
-          filtered = filtered.filter((b: any) => b.city === selectedLocation)
+          filtered = filtered.filter((b) => b.city === selectedLocation)
         }
-        
+
         if (searchQuery) {
-          filtered = filtered.filter((b: any) => 
+          filtered = filtered.filter((b) =>
             b.business_name.toLowerCase().includes(searchQuery.toLowerCase())
           )
         }
@@ -85,7 +91,11 @@ export default function MarketplacePage() {
     } finally {
       setIsLoading(false)
     }
-  }
+  }, [searchQuery, selectedCategory, selectedLocation])
+
+  useEffect(() => {
+    loadBusinesses()
+  }, [loadBusinesses])
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-white via-blue-50 to-white">

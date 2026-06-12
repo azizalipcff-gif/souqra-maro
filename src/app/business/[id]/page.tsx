@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useCallback } from "react"
 import { useRouter, useParams } from "next/navigation"
 import { Loader2, Building2, MapPin, Phone, FileText, ArrowLeft } from "lucide-react"
 import { Header } from "@/components/layout/header"
@@ -30,11 +30,7 @@ export default function BusinessDetailPage() {
   const [business, setBusiness] = useState<Business | null>(null)
   const [error, setError] = useState("")
 
-  useEffect(() => {
-    loadBusiness()
-  }, [id])
-
-  const loadBusiness = async () => {
+  const loadBusiness = useCallback(async () => {
     try {
       console.log("=== BUSINESS DETAILS DEBUG ===")
       console.log("Route ID:", id)
@@ -98,7 +94,11 @@ export default function BusinessDetailPage() {
       setError('Failed to load business')
       setIsLoading(false)
     }
-  }
+  }, [id])
+
+  useEffect(() => {
+    loadBusiness()
+  }, [loadBusiness])
 
   if (isLoading) {
     return (

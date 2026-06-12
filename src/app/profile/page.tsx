@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useCallback } from "react"
 import { useRouter } from "next/navigation"
 import { Loader2, TrendingUp, ArrowRight } from "lucide-react"
 import { Header } from "@/components/layout/header"
@@ -45,20 +45,7 @@ export default function ProfilePage() {
   const [error, setError] = useState("")
   const [success, setSuccess] = useState("")
 
-  useEffect(() => {
-    console.log('[ProfilePage] Auth state:', { user: user?.id, session: session?.user?.id, authLoading })
-    
-    // Only load profile if user is authenticated
-    if (user && !authLoading) {
-      loadProfile()
-    } else if (!authLoading && !user) {
-      // User is not authenticated and auth is done loading
-      setIsLoading(false)
-      setError('You need to be logged in to view your profile')
-    }
-  }, [user, authLoading])
-
-  const loadProfile = async () => {
+  const loadProfile = useCallback(async () => {
     if (!user) {
       console.log('[ProfilePage] No user to load profile for')
       return
@@ -143,7 +130,15 @@ export default function ProfilePage() {
     } finally {
       setIsLoading(false)
     }
-  }
+  }, [user])
+
+  useEffect(() => {
+    console.log('[ProfilePage] Auth state:', { user: user?.id, session: session?.user?.id, authLoading })
+
+    if (user && !authLoading) {
+      loadProfile()
+    }
+  }, [user, authLoading, loadProfile])
 
   const handleAvatarUpdate = (avatarUrl: string) => {
     setProfile(prev => ({ ...prev, avatar_url: avatarUrl }))

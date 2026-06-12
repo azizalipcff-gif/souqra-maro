@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useCallback } from "react"
 import { useRouter } from "next/navigation"
 import { Loader2, Building2, MapPin, Phone, FileText, CheckCircle, Upload, X, Image as ImageIcon } from "lucide-react"
 import { Header } from "@/components/layout/header"
@@ -60,11 +60,7 @@ export default function AddBusinessPage() {
   const [uploadProgress, setUploadProgress] = useState<{ logo: number, cover: number }>({ logo: 0, cover: 0 })
   const [uploadError, setUploadError] = useState("")
 
-  useEffect(() => {
-    checkAuth()
-  }, [])
-
-  const checkAuth = async () => {
+  const checkAuth = useCallback(async () => {
     try {
       console.log("=== ADD BUSINESS AUTH CHECK ===")
       const supabase = getSupabase()
@@ -106,7 +102,11 @@ export default function AddBusinessPage() {
     } finally {
       setIsLoading(false)
     }
-  }
+  }, [])
+
+  useEffect(() => {
+    checkAuth()
+  }, [checkAuth])
 
   const handleLogoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]

@@ -8,18 +8,23 @@ import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/componen
 import { Badge } from "@/components/ui/badge"
 import { Header } from "@/components/layout/header"
 import { Footer } from "@/components/layout/footer"
-import { useState, useEffect } from "react"
-import { getSupabase } from "@/lib/supabase/client"
+import { useState, useEffect, useCallback } from "react"
+
+interface FeaturedBusiness {
+  id: string
+  business_name: string
+  city?: string | null
+  category?: string | null
+  description?: string | null
+  logo_url?: string | null
+  cover_url?: string | null
+}
 
 export default function Home() {
-  const [featuredBusinesses, setFeaturedBusinesses] = useState<any[]>([])
+  const [featuredBusinesses, setFeaturedBusinesses] = useState<FeaturedBusiness[]>([])
   const [isLoading, setIsLoading] = useState(true)
 
-  useEffect(() => {
-    loadFeaturedBusinesses()
-  }, [])
-
-  const loadFeaturedBusinesses = async () => {
+  const loadFeaturedBusinesses = useCallback(async () => {
     try {
       const response = await fetch('/api/businesses/public?limit=8')
       const { businesses } = await response.json()
@@ -32,7 +37,11 @@ export default function Home() {
     } finally {
       setIsLoading(false)
     }
-  }
+  }, [])
+
+  useEffect(() => {
+    loadFeaturedBusinesses()
+  }, [loadFeaturedBusinesses])
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-white via-blue-50 to-white">
@@ -156,7 +165,7 @@ export default function Home() {
                         <div className="relative h-48 overflow-hidden">
                           {business.logo_url || business.cover_url ? (
                             <img
-                              src={business.logo_url || business.cover_url}
+                              src={business.logo_url || business.cover_url || undefined}
                               alt={business.business_name}
                               className="w-full h-full object-cover hover:scale-110 transition-transform duration-300"
                             />

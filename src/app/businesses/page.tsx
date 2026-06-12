@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useCallback } from "react"
 import { Loader2, Building2, MapPin, Phone, ArrowRight } from "lucide-react"
 import { Header } from "@/components/layout/header"
 import { Footer } from "@/components/layout/footer"
@@ -24,11 +24,7 @@ export default function BusinessesPage() {
   const [businesses, setBusinesses] = useState<Business[]>([])
   const [error, setError] = useState("")
 
-  useEffect(() => {
-    loadBusinesses()
-  }, [])
-
-  const loadBusinesses = async () => {
+  const loadBusinesses = useCallback(async () => {
     try {
       const supabase = getSupabase()
       
@@ -49,7 +45,11 @@ export default function BusinessesPage() {
     } finally {
       setIsLoading(false)
     }
-  }
+  }, [])
+
+  useEffect(() => {
+    loadBusinesses()
+  }, [loadBusinesses])
 
   if (isLoading) {
     return (
