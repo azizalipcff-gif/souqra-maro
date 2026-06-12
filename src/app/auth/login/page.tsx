@@ -64,8 +64,10 @@ function LoginForm() {
 
   const handleGoogleLogin = async () => {
     setIsGoogleLoading(true)
+    setError(null)
+
     try {
-      const origin = process.env.NEXT_PUBLIC_SITE_URL || window.location.origin
+      const origin = typeof window !== 'undefined' ? window.location.origin : (process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000')
       const { data, error } = await getSupabase().auth.signInWithOAuth({
         provider: 'google',
         options: {
@@ -81,8 +83,15 @@ function LoginForm() {
         console.error('Google login error:', error)
         setError(error.message)
         setIsGoogleLoading(false)
+        return
       }
-      // If successful, the redirect will happen automatically
+
+      if (data?.url) {
+        window.location.assign(data.url)
+        return
+      }
+
+      setIsGoogleLoading(false)
     } catch (error) {
       console.error('Google login error:', error)
       setError('An unexpected error occurred during login')

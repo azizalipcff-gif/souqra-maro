@@ -26,12 +26,15 @@ function LoginForm() {
     setIsLoading(true)
 
     try {
+      const origin = typeof window !== 'undefined'
+        ? window.location.origin
+        : (process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000')
       const supabase = getSupabase()
 
-      const { error } = await supabase.auth.signInWithOAuth({
+      const { data, error } = await supabase.auth.signInWithOAuth({
         provider: "google",
         options: {
-          redirectTo: `${window.location.origin}/auth/callback?next=${encodeURIComponent(next)}`,
+          redirectTo: `${origin}/auth/callback?next=${encodeURIComponent(next)}`,
           queryParams: {
             access_type: "offline",
             prompt: "consent",
@@ -45,6 +48,12 @@ function LoginForm() {
         return
       }
 
+      if (data?.url) {
+        window.location.assign(data.url)
+        return
+      }
+
+      setIsLoading(false)
     } catch (err) {
       setError("An unexpected error occurred")
       setIsLoading(false)

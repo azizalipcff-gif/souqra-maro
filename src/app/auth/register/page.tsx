@@ -72,8 +72,10 @@ export default function RegisterPage() {
 
   const handleGoogleLogin = async () => {
     setIsGoogleLoading(true)
+    setError(null)
+
     try {
-      const origin = process.env.NEXT_PUBLIC_SITE_URL || window.location.origin
+      const origin = typeof window !== 'undefined' ? window.location.origin : (process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000')
       const { data, error } = await getSupabase().auth.signInWithOAuth({
         provider: 'google',
         options: {
@@ -89,7 +91,15 @@ export default function RegisterPage() {
         console.error('Google login error:', error)
         setError(error.message)
         setIsGoogleLoading(false)
+        return
       }
+
+      if (data?.url) {
+        window.location.assign(data.url)
+        return
+      }
+
+      setIsGoogleLoading(false)
     } catch (error) {
       console.error('Google login error:', error)
       setError('An unexpected error occurred during login')
