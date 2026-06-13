@@ -1,6 +1,7 @@
+// src/contexts/AuthContext.tsx
 "use client"
 
-import { createContext, useContext, useEffect, useState, ReactNode } from 'react'
+import { createContext, useContext, useEffect, useState, ReactNode, useRef } from 'react' // ✅ أضف useRef
 import { User, Session } from '@supabase/supabase-js'
 import { getSupabase } from '@/lib/supabase/client'
 
@@ -19,8 +20,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [session, setSession] = useState<Session | null>(null)
   const [loading, setLoading] = useState(true)
   const [initialized, setInitialized] = useState(false)
+  
+  // ✅ مفتاح الحل: منع التنفيذ المتكرر
+  const initializedRef = useRef(false)
 
   useEffect(() => {
+    // ✅ منع التنفيذ مرتين
+    if (initializedRef.current) return
+    initializedRef.current = true
+
     const supabase = getSupabase()
     if (!supabase) {
       setLoading(false)
@@ -30,7 +38,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     let mounted = true
 
-    // Get initial session
     const initializeAuth = async () => {
       try {
         const { data: { session: initialSession } } = await supabase.auth.getSession()
@@ -42,7 +49,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           setLoading(false)
         }
       } catch (error) {
-        console.error('[AuthContext] Error initializing auth:', error)
+        console.error('[AuthContext] Error:', error)
         if (mounted) {
           setInitialized(true)
           setLoading(false)
@@ -52,13 +59,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     initializeAuth()
 
-    // Listen for auth state changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       (event: string, session: Session | null) => {
         if (!mounted) return
-
-        console.log('[AuthContext] Auth state changed:', event, session?.user?.id)
-        
+        console.log('[Auth] Event:', event)
         setSession(session)
         setUser(session?.user ?? null)
         
@@ -82,25 +86,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const signOut = async () => {
     const supabase = getSupabase()
     if (!supabase) return
-
-    try {
-      await supabase.auth.signOut()
-      setUser(null)
-      setSession(null)
-    } catch (error) {
-      console.error('[AuthContext] Error signing out:', error)
-    }
+    await supabase.auth.signOut()
+    setUser(null)
+    setSession(null)
   }
 
-  const value = {
-    user,
-    session,
-    loading,
-    initialized,
-    signOut,
-  }
-
-  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>
+  return (
+    <AuthContext.Provider value={{ user, session, loading, initialized, signOut }}>
+      {children}
+    </AuthContext.Provider>
+  )
 }
 
 export function useAuth() {

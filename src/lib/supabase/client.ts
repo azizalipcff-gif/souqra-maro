@@ -22,6 +22,22 @@ export function getSupabase() {
           persistSession: true,
           autoRefreshToken: true,
           detectSessionInUrl: true,
+          storage: {
+            getItem: (key) => {
+              const cookies = document.cookie.split(';').reduce((acc, cookie) => {
+                const [k, v] = cookie.trim().split('=')
+                acc[k] = v
+                return acc
+              }, {} as Record<string, string>)
+              return cookies[key] || null
+            },
+            setItem: (key, value) => {
+              document.cookie = `${key}=${value}; path=/; max-age=3600; SameSite=Lax; Secure`
+            },
+            removeItem: (key) => {
+              document.cookie = `${key}=; path=/; max-age=0; SameSite=Lax; Secure`
+            },
+          },
         },
       }
     )
