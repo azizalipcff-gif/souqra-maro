@@ -12,6 +12,7 @@ interface AuthContextType {
   role: 'user' | 'business_owner' | 'admin' | null
   signIn: (email: string, password: string) => Promise<void>
   signUp: (email: string, password: string, fullName: string) => Promise<void>
+  signInWithGoogle: () => Promise<void>
   signOut: () => Promise<void>
   isAdmin: () => boolean
   isBusinessOwner: () => boolean
@@ -105,6 +106,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     router.push('/')
   }
 
+  const signInWithGoogle = async () => {
+    const { error } = await supabase.auth.signInWithOAuth({
+      provider: 'google',
+      options: {
+        redirectTo: `${window.location.origin}/auth/callback`,
+      },
+    })
+    if (error) throw error
+  }
+
   const signOut = async () => {
     await supabase.auth.signOut()
     setRole(null)
@@ -116,7 +127,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const isAuthenticated = () => !!user
 
   return (
-    <AuthContext.Provider value={{ user, session, loading, role, signIn, signUp, signOut, isAdmin, isBusinessOwner, isAuthenticated }}>
+    <AuthContext.Provider value={{ user, session, loading, role, signIn, signUp, signInWithGoogle, signOut, isAdmin, isBusinessOwner, isAuthenticated }}>
       {children}
     </AuthContext.Provider>
   )
