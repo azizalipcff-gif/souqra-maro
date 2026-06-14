@@ -6,10 +6,6 @@ export async function middleware(request: NextRequest) {
     request,
   })
 
-  supabaseResponse = NextResponse.next({
-    request,
-  })
-
   const supabase = createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
@@ -33,7 +29,7 @@ export async function middleware(request: NextRequest) {
   } = await supabase.auth.getUser()
 
   // Protected routes - redirect to login if not authenticated
-  const protectedRoutes = ['/dashboard', '/profile', '/add-business', '/add-product']
+  const protectedRoutes = ['/dashboard', '/add-business', '/add-product']
   const isProtectedRoute = protectedRoutes.some(route => 
     request.nextUrl.pathname.startsWith(route)
   )
@@ -46,25 +42,10 @@ export async function middleware(request: NextRequest) {
   // Admin routes - only admin can access
   const isAdminRoute = request.nextUrl.pathname.startsWith('/admin')
   
-  if (isAdminRoute) {
-    if (!user) {
-      // Not authenticated - redirect to login
-      const redirectUrl = new URL('/login', request.url)
-      return NextResponse.redirect(redirectUrl)
-    }
-
-    // Fetch user role from profiles table
-    const { data: profile, error } = await supabase
-      .from('profiles')
-      .select('role')
-      .eq('id', user.id)
-      .single()
-
-    if (error || !profile || profile.role !== 'admin') {
-      // Not admin - redirect to home or login
-      const redirectUrl = new URL('/', request.url)
-      return NextResponse.redirect(redirectUrl)
-    }
+  if (isAdminRoute && !user) {
+    // Not authenticated - redirect to login
+    const redirectUrl = new URL('/login', request.url)
+    return NextResponse.redirect(redirectUrl)
   }
 
   return supabaseResponse

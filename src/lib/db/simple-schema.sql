@@ -10,7 +10,7 @@ CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 CREATE TABLE IF NOT EXISTS profiles (
     id UUID PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE,
     full_name TEXT,
-    role TEXT NOT NULL CHECK (role IN ('client', 'business_owner')) DEFAULT 'client',
+    role TEXT NOT NULL CHECK (role IN ('client', 'business_owner', 'admin')) DEFAULT 'client',
     created_at TIMESTAMP WITH TIME ZONE DEFAULT TIMEZONE('utc'::text, NOW()) NOT NULL
 );
 
