@@ -2,10 +2,10 @@
 
 import Link from "next/link"
 import { motion } from "framer-motion"
-import { Search, ShoppingCart, Heart, Menu, X } from "lucide-react"
+import { ShoppingCart, Heart, Menu, X } from "lucide-react"
 import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
 import { DarkModeToggle } from "@/components/ui/dark-mode-toggle"
+import { SearchBar } from "@/components/marketplace/SearchBar"
 import { useState } from "react"
 
 export function Header() {
@@ -59,14 +59,7 @@ export function Header() {
 
           {/* Search Bar */}
           <div className="hidden lg:flex items-center space-x-2">
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
-              <Input
-                type="search"
-                placeholder="Search products, services..."
-                className="pl-10 w-64"
-              />
-            </div>
+            <SearchBar placeholder="Search products, services..." className="w-64" />
           </div>
 
           {/* Right Actions */}
@@ -128,14 +121,7 @@ export function Header() {
               >
                 About
               </Link>
-              <div className="relative">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
-                <Input
-                  type="search"
-                  placeholder="Search..."
-                  className="pl-10"
-                />
-              </div>
+              <SearchBar placeholder="Search..." className="w-full" />
             </nav>
           </motion.div>
         )}
