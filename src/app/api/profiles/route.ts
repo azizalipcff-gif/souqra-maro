@@ -1,10 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createRouteHandlerClient } from '@/lib/supabase/server'
-import { normalizeRole } from '@/lib/auth/roles'
+import { createClient } from '@/lib/supabase/server'
 
 export async function GET(request: NextRequest) {
   try {
-    const supabase = createRouteHandlerClient(request)
+    const supabase = await createClient()
 
     const { data: { user }, error: userError } = await supabase.auth.getUser()
 
@@ -17,8 +16,8 @@ export async function GET(request: NextRequest) {
 
     const { data: profile, error } = await supabase
       .from('profiles')
-      .select('id, user_id, full_name, username, phone, city, bio, avatar_url, role, created_at')
-      .eq('user_id', user.id)
+      .select('id, full_name, role, created_at')
+      .eq('id', user.id)
       .maybeSingle()
 
     console.log("PROFILE =>", profile)
@@ -38,7 +37,7 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   try {
-    const supabase = createRouteHandlerClient(request)
+    const supabase = await createClient()
 
     const { data: { user }, error: userError } = await supabase.auth.getUser()
 
@@ -52,9 +51,9 @@ export async function POST(request: NextRequest) {
     const { data: profile, error } = await supabase
       .from('profiles')
       .insert({
-        user_id: user.id,
+        id: user.id,
         full_name,
-        role: normalizeRole(role) === 'seller' ? 'business_owner' : normalizeRole(role) === 'business' ? 'business_owner' : 'client',
+        role: role === 'seller' ? 'business_owner' : role === 'business' ? 'business_owner' : role || 'client',
       })
       .select('id, full_name, role, created_at')
       .maybeSingle()
@@ -77,7 +76,7 @@ export async function POST(request: NextRequest) {
 
 export async function PUT(request: NextRequest) {
   try {
-    const supabase = createRouteHandlerClient(request)
+    const supabase = await createClient()
 
     const { data: { user }, error: userError } = await supabase.auth.getUser()
 
@@ -93,8 +92,8 @@ export async function PUT(request: NextRequest) {
       .update({
         full_name,
       })
-      .eq('user_id', user.id)
-      .select('id, user_id, full_name, username, phone, city, bio, avatar_url, role, created_at')
+      .eq('id', user.id)
+      .select('id, full_name, role, created_at')
       .maybeSingle()
 
     if (error) {

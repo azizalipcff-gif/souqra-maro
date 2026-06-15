@@ -1,4 +1,4 @@
-import { createServiceClient } from '@/lib/supabase/server'
+import { createClient } from '@/lib/supabase/server'
 import { NextResponse } from 'next/server'
 
 export async function GET(request: Request) {
@@ -6,9 +6,9 @@ export async function GET(request: Request) {
     const { searchParams } = new URL(request.url)
     const limit = parseInt(searchParams.get('limit') || '8')
     
-    const serviceSupabase = createServiceClient()
+    const supabase = await createClient()
     
-    const { data: businesses, error } = await serviceSupabase
+    const { data: businesses, error } = await supabase
       .from('businesses')
       .select('*')
       .eq('approved', true)

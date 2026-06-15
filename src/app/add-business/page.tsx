@@ -11,8 +11,7 @@ import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Card, CardContent } from "@/components/ui/card"
-import { getSupabase } from "@/lib/supabase/client"
-import { uploadBusinessImage } from "@/lib/utils/image-upload"
+import { createClient } from "@/lib/supabase/client"
 
 const BUSINESS_CATEGORIES = [
   "Restaurants",
@@ -63,7 +62,7 @@ export default function AddBusinessPage() {
   const checkAuth = useCallback(async () => {
     try {
       console.log("=== ADD BUSINESS AUTH CHECK ===")
-      const supabase = getSupabase()
+      const supabase = createClient()
       
       // Wait for session to be available
       let retries = 0
@@ -202,7 +201,7 @@ export default function AddBusinessPage() {
     setIsSubmitting(true)
 
     try {
-      const supabase = getSupabase()
+      const supabase = createClient()
 
       // Check current session
       const { data: { session } } = await supabase.auth.getSession()
@@ -256,8 +255,19 @@ export default function AddBusinessPage() {
       let logoUrl = null
       if (logoFile) {
         try {
-          const logoResult = await uploadBusinessImage(logoFile, "logo", businessId)
-          logoUrl = logoResult.url
+          const formData = new FormData()
+          formData.append('file', logoFile)
+          formData.append('folder', `businesses/${businessId}`)
+          
+          const uploadResponse = await fetch('/api/upload', {
+            method: 'POST',
+            body: formData,
+          })
+          
+          if (uploadResponse.ok) {
+            const uploadData = await uploadResponse.json()
+            logoUrl = uploadData.url
+          }
         } catch (error) {
           console.error('Logo upload error:', error)
           setUploadError("Failed to upload logo. Business created without logo.")
@@ -268,8 +278,19 @@ export default function AddBusinessPage() {
       let coverUrl = null
       if (coverFile) {
         try {
-          const coverResult = await uploadBusinessImage(coverFile, "cover", businessId)
-          coverUrl = coverResult.url
+          const formData = new FormData()
+          formData.append('file', coverFile)
+          formData.append('folder', `businesses/${businessId}`)
+          
+          const uploadResponse = await fetch('/api/upload', {
+            method: 'POST',
+            body: formData,
+          })
+          
+          if (uploadResponse.ok) {
+            const uploadData = await uploadResponse.json()
+            coverUrl = uploadData.url
+          }
         } catch (error) {
           console.error('Cover upload error:', error)
           setUploadError("Failed to upload cover image. Business created without cover.")

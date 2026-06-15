@@ -9,6 +9,13 @@ export interface User {
   updatedAt: Date
 }
 
+export interface Profile {
+  id: string
+  full_name: string
+  role: 'client' | 'business_owner' | 'admin'
+  created_at: string
+}
+
 export interface Product {
   id: string
   sellerId: string
