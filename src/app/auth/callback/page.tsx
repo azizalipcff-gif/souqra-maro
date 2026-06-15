@@ -23,13 +23,13 @@ export default async function AuthCallbackPage({
 
   // Create profile if it doesn't exist (for Google OAuth users)
   if (data.user) {
-    const { data: profile, error: profileError } = await supabase
+    const { data: profile } = await supabase
       .from('profiles')
       .select('id')
       .eq('id', data.user.id)
-      .single()
+      .maybeSingle()
 
-    if (profileError || !profile) {
+    if (!profile) {
       // Profile doesn't exist, create it
       const fullName = data.user.user_metadata?.full_name || data.user.user_metadata?.name || data.user.email || ''
       await supabase

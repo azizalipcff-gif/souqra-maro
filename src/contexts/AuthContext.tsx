@@ -1,6 +1,6 @@
 "use client"
 
-import { createContext, useContext, useEffect, useState } from 'react'
+import { createContext, useContext, useEffect, useState, useRef } from 'react'
 import { User, Session } from '@supabase/supabase-js'
 import { createClient } from '@/lib/supabase/client'
 import { useRouter } from 'next/navigation'
@@ -27,7 +27,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [loading, setLoading] = useState(true)
   const [role, setRole] = useState<'client' | 'business_owner' | 'admin' | null>(null)
   const router = useRouter()
-  const supabase = createClient()
+  const supabaseRef = useRef(createClient())
+  const supabase = supabaseRef.current
 
   const createProfile = async (userId: string, fullName: string) => {
     try {
@@ -53,25 +54,19 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         .from('profiles')
         .select('role')
         .eq('id', userId)
-        .single()
+        .maybeSingle()
       
       if (error) {
         console.error('[AuthContext] Error fetching user role:', error)
-        setRole('client') // Default to client if error
+        setRole('client')
       } else if (profile) {
         setRole(profile.role as 'client' | 'business_owner' | 'admin')
       } else {
-        // Profile doesn't exist, create it
-        const { data: userData } = await supabase.auth.getUser()
-        if (userData?.user) {
-          const fullName = userData.user.user_metadata?.full_name || userData.user.email || ''
-          await createProfile(userId, fullName)
-        }
-        setRole('client') // Default to client if no profile
+        setRole('client')
       }
     } catch (error) {
       console.error('[AuthContext] Error fetching user role:', error)
-      setRole('client') // Default to client if error
+      setRole('client')
     }
   }
 
@@ -95,8 +90,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     // Listen for auth changes
     const {
       data: { subscription },
-    } = supabase.auth.onAuthStateChange(async (_event, session) => {
+    } = supabase.auth.onAuthStateChange(async (event, session) => {
       if (!mounted) return
+      
+      console.log('[AuthContext] Auth state changed:', event, !!session)
       
       setSession(session)
       setUser(session?.user ?? null)
@@ -114,30 +111,20 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       mounted = false
       subscription.unsubscribe()
     }
-  }, [supabase.auth])
+  }, [])
 
   const signIn = async (email: string, password: string) => {
-    const { data, error } = await supabase.auth.signInWithPassword({
+    const { error } = await supabase.auth.signInWithPassword({
       email,
       password,
     })
     if (error) throw error
-    
-    // Wait for session to be set
-    if (data.session) {
-      setSession(data.session)
-      setUser(data.session.user)
-      await fetchUserRole(data.session.user.id)
-      
-      // Small delay to ensure state is updated before redirect
-      setTimeout(() => {
-        router.push('/')
-      }, 100)
-    }
+    // Auth listener will handle state updates
+    router.push('/')
   }
 
   const signUp = async (email: string, password: string, fullName: string) => {
-    const { data, error } = await supabase.auth.signUp({
+    const { error } = await supabase.auth.signUp({
       email,
       password,
       options: {
@@ -147,19 +134,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       },
     })
     if (error) throw error
-    
-    // Create profile manually if trigger didn't fire
-    if (data.user) {
-      await createProfile(data.user.id, fullName)
-      setSession(data.session)
-      setUser(data.user)
-      await fetchUserRole(data.user.id)
-      
-      // Small delay to ensure state is updated before redirect
-      setTimeout(() => {
-        router.push('/')
-      }, 100)
-    }
+    // Auth listener will handle state updates
+    router.push('/')
   }
 
   const signInWithGoogle = async () => {
@@ -173,9 +149,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }
 
   const signOut = async () => {
-    await supabase.auth.signOut()
-    setRole(null)
-    router.push('/')
+    try {
+      await supabase.auth.signOut()
+      // Auth listener will handle state updates
+      router.push('/')
+    } catch (error) {
+      console.error('[AuthContext] Error signing out:', error)
+    }
   }
 
   const isAdmin = () => role === 'admin'
