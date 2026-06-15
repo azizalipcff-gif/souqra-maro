@@ -7,39 +7,35 @@ export default async function AuthCallbackPage({
   searchParams: { code?: string }
 }) {
   const code = searchParams.code
-  
-  if (!code) {
-    redirect('/login?error=no_code')
-  }
+
+  if (!code) redirect('/login?error=no_code')
 
   const supabase = await createClient()
 
   const { data, error } = await supabase.auth.exchangeCodeForSession(code)
 
-  if (error) {
-    console.error('Error exchanging code for session:', error)
+  if (error || !data.session) {
     redirect('/login?error=auth_failed')
   }
 
-  // Create profile if it doesn't exist (for Google OAuth users)
-  if (data.user) {
-    const { data: profile } = await supabase
-      .from('profiles')
-      .select('id')
-      .eq('id', data.user.id)
-      .maybeSingle()
+  const user = data.session.user
 
-    if (!profile) {
-      // Profile doesn't exist, create it
-      const fullName = data.user.user_metadata?.full_name || data.user.user_metadata?.name || data.user.email || ''
-      await supabase
-        .from('profiles')
-        .insert({
-          id: data.user.id,
-          full_name: fullName,
-          role: 'client'
-        })
-    }
+  const { data: profile } = await supabase
+    .from('profiles')
+    .select('id')
+    .eq('id', user.id)
+    .maybeSingle()
+
+  if (!profile) {
+    await supabase.from('profiles').insert({
+      id: user.id,
+      full_name:
+        user.user_metadata?.full_name ||
+        user.user_metadata?.name ||
+        user.email ||
+        '',
+      role: 'client',
+    })
   }
 
   redirect('/')

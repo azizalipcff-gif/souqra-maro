@@ -30,24 +30,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const supabaseRef = useRef(createClient())
   const supabase = supabaseRef.current
 
-  const createProfile = async (userId: string, fullName: string) => {
-    try {
-      const { error } = await supabase
-        .from('profiles')
-        .insert({
-          id: userId,
-          full_name: fullName,
-          role: 'client'
-        })
-      
-      if (error) {
-        console.error('[AuthContext] Error creating profile:', error)
-      }
-    } catch (error) {
-      console.error('[AuthContext] Error creating profile:', error)
-    }
-  }
-
   const fetchUserRole = async (userId: string) => {
     try {
       const { data: profile, error } = await supabase
