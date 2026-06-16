@@ -7,7 +7,7 @@ import { Header } from '@/components/layout/header'
 import { Footer } from '@/components/layout/footer'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
-import { User, MapPin, Briefcase, Package, Settings, LogOut, LayoutDashboard } from 'lucide-react'
+import { MapPin, Briefcase, Package, Settings, LogOut, LayoutDashboard } from 'lucide-react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 
@@ -43,61 +43,83 @@ export default function ProfilePage() {
   const [loadingProfile, setLoadingProfile] = useState(true)
 
   useEffect(() => {
+    if (loading) return
+
     if (!user) {
       router.push('/login')
       return
     }
 
-    loadProfile()
-    loadBusinesses()
-    loadProducts()
-  }, [user])
+    const loadAllData = async () => {
+      try {
+        setLoadingProfile(true)
+        await Promise.all([
+          loadProfileData(user.id),
+          loadBusinessesData(user.id),
+          loadProductsData(user.id)
+        ])
+      } catch (err) {
+        console.error('Error loading page data:', err)
+      } finally {
+        setLoadingProfile(false)
+      }
+    }
 
-  const loadProfile = async () => {
-    if (!user) return
+    loadAllData()
+  }, [user, loading, router])
 
+  const loadProfileData = async (userId: string) => {
     try {
       const { data, error } = await supabase
         .from('profiles')
         .select('*')
-        .eq('id', user.id)
+        .eq('id', userId)
         .maybeSingle()
 
       if (error) {
         console.error('Error loading profile:', error)
-      } else if (data) {
+        return
+      }
+
+      if (data) {
         setProfile(data)
       } else {
-        // Profile doesn't exist, create it
-        const fullName = user.user_metadata?.full_name || user.user_metadata?.name || user.email || ''
-        const { error: insertError } = await supabase.from('profiles').insert({
-          id: user.id,
+        const fullName = user?.user_metadata?.full_name || user?.user_metadata?.name || user?.email || ''
+        const newProfile = {
+          id: userId,
           full_name: fullName,
-          role: 'client',
-        })
+          role: 'client' as const,
+          city: null,
+          bio: null,
+          avatar_url: null,
+          username: null
+        }
+
+        const { error: insertError } = await supabase
+          .from('profiles')
+          .insert({
+            id: newProfile.id,
+            full_name: newProfile.full_name,
+            role: newProfile.role,
+          })
 
         if (insertError) {
           console.error('Error creating profile:', insertError)
         } else {
-          // Reload profile after creation
-          loadProfile()
+          setProfile(newProfile)
         }
       }
     } catch (error) {
-      console.error('Error loading profile:', error)
-    } finally {
-      setLoadingProfile(false)
+      console.error('Exception in profile loading:', error)
     }
   }
 
-  const loadBusinesses = async () => {
-    if (!user) return
-
+  const loadBusinessesData = async (userId: string) => {
     try {
       const { data, error } = await supabase
         .from('businesses')
         .select('id, name, description')
-        .eq('owner_id', user.id)
+        .eq('owner_id', userId)
 
       if (error) {
         console.error('Error loading businesses:', error)
@@ -105,18 +127,16 @@ export default function ProfilePage() {
         setBusinesses(data || [])
       }
     } catch (error) {
-      console.error('Error loading businesses:', error)
+      console.error('Exception in businesses loading:', error)
     }
   }
 
-  const loadProducts = async () => {
-    if (!user) return
-
+  const loadProductsData = async (userId: string) => {
     try {
       const { data, error } = await supabase
         .from('products')
         .select('id, name, price')
-        .eq('seller_id', user.id)
+        .eq('seller_id', userId)
 
       if (error) {
         console.error('Error loading products:', error)
@@ -124,7 +144,7 @@ export default function ProfilePage() {
         setProducts(data || [])
       }
     } catch (error) {
-      console.error('Error loading products:', error)
+      console.error('Exception in products loading:', error)
     }
   }
 
@@ -230,7 +250,7 @@ export default function ProfilePage() {
                       <Link href="/add-business">Add Business</Link>
                     </Button>
                   </div>
-                )}
+                ))}
               </CardContent>
             </Card>
           )}
