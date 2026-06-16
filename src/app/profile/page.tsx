@@ -250,7 +250,7 @@ export default function ProfilePage() {
                       <Link href="/add-business">Add Business</Link>
                     </Button>
                   </div>
-                ))}
+                )}
               </CardContent>
             </Card>
           )}
