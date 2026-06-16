@@ -43,29 +43,28 @@ export default function ProfilePage() {
   const [loadingProfile, setLoadingProfile] = useState(true)
 
   useEffect(() => {
-    if (loading) return
-
-    if (!user) {
+    if (!loading && !user) {
       router.push('/login')
       return
     }
 
-    const loadAllData = async () => {
-      try {
-        setLoadingProfile(true)
-        await Promise.all([
-          loadProfileData(user.id),
-          loadBusinessesData(user.id),
-          loadProductsData(user.id)
-        ])
-      } catch (err) {
-        console.error('Error loading page data:', err)
-      } finally {
-        setLoadingProfile(false)
+    if (user) {
+      const loadAllData = async () => {
+        try {
+          setLoadingProfile(true)
+          await Promise.all([
+            loadProfileData(user.id),
+            loadBusinessesData(user.id),
+            loadProductsData(user.id)
+          ])
+        } catch (err) {
+          console.error('Error loading page data:', err)
+        } finally {
+          setLoadingProfile(false)
+        }
       }
+      loadAllData()
     }
-
-    loadAllData()
   }, [user, loading, router])
 
   const loadProfileData = async (userId: string) => {
@@ -153,7 +152,7 @@ export default function ProfilePage() {
     router.push('/')
   }
 
-  if (loading || loadingProfile) {
+  if (!user && loading) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-white via-blue-50 to-white">
         <Header />
@@ -181,6 +180,7 @@ export default function ProfilePage() {
       <Header />
       <div className="container mx-auto px-4 py-16">
         <div className="max-w-4xl mx-auto space-y-6">
+          
           {/* Profile Card */}
           <Card className="shadow-lg border-0">
             <CardHeader>
@@ -321,6 +321,7 @@ export default function ProfilePage() {
               </Button>
             </CardContent>
           </Card>
+
         </div>
       </div>
       <Footer />

@@ -49,10 +49,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     } catch (error) {
       console.error('[AuthContext] Error fetching user role:', error)
       setRole('client')
-    }
-  }
-
-  useEffect(() => {
+    }useEffect(() => {
     let mounted = true
 
     // Get initial session
@@ -63,7 +60,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setUser(session?.user ?? null)
       
       if (session?.user) {
-        await fetchUserRole(session.user.id)
+        // كنحيدو await باش ما يحبسش الـ loading
+        fetchUserRole(session.user.id)
       }
       
       setLoading(false)
@@ -81,7 +79,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setUser(session?.user ?? null)
       
       if (session?.user) {
-        await fetchUserRole(session.user.id)
+        // حيدنا await هنايا باش غير تجي الـ Auth Token، يشعل الموقع والـ role يجي فـ الطريق
+        fetchUserRole(session.user.id)
       } else {
         setRole(null)
       }
@@ -94,6 +93,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       subscription.unsubscribe()
     }
   }, [])
+    return () => {
+      mounted = false
+      subscription.unsubscribe()
+    }
+  }
 
   const signIn = async (email: string, password: string) => {
     const { error } = await supabase.auth.signInWithPassword({
