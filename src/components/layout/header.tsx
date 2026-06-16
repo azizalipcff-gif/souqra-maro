@@ -16,6 +16,10 @@ export function Header() {
   const { user, loading, signOut, isAdmin, isBusinessOwner } = useAuth()
   const dropdownRef = useRef<HTMLDivElement>(null)
 
+  console.log('HEADER DEBUG - user:', user)
+  console.log('HEADER DEBUG - loading:', loading)
+  console.log('HEADER DEBUG - should show profile:', !loading && user)
+
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
@@ -195,6 +199,19 @@ export function Header() {
                   </div>
                 )}
               </>
+            )}
+
+            {/* Fallback: Always show profile button if user exists, even during loading */}
+            {user && loading && (
+              <div className="relative">
+                <Button variant="ghost" size="icon" className="relative">
+                  <Avatar className="h-8 w-8">
+                    <div className="h-full w-full rounded-full bg-gradient-to-br from-blue-600 to-purple-600 flex items-center justify-center text-white text-sm font-bold">
+                      {getUserInitials()}
+                    </div>
+                  </Avatar>
+                </Button>
+              </div>
             )}
 
             {/* Mobile Menu Button */}
