@@ -29,8 +29,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const router = useRouter()
   const supabaseRef = useRef(createClient())
   const supabase = supabaseRef.current
+  const hasFetchedRole = useRef(false)
 
   const fetchUserRole = async (userId: string) => {
+    // Prevent duplicate fetches
+    if (hasFetchedRole.current) {
+      console.log('[AuthContext] Role already fetched, skipping duplicate fetch')
+      return
+    }
+
     try {
       const { data: profile, error } = await supabase
         .from('profiles')
@@ -43,12 +50,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         setRole('client')
       } else if (profile) {
         setRole(profile.role as 'client' | 'business_owner' | 'admin')
+        hasFetchedRole.current = true
       } else {
         setRole('client')
+        hasFetchedRole.current = true
       }
     } catch (error) {
       console.error('[AuthContext] Error fetching user role:', error)
       setRole('client')
+      hasFetchedRole.current = true
     }
   }
 
@@ -78,10 +88,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setSession(session)
       setUser(session?.user ?? null)
       
-      if (session?.user) {
+      // Only fetch role on SIGNED_IN and INITIAL_SESSION events, not TOKEN_REFRESHED
+      if (session?.user && (event === 'SIGNED_IN' || event === 'INITIAL_SESSION')) {
         fetchUserRole(session.user.id)
-      } else {
+      } else if (!session?.user) {
+        // Reset role and fetch guard on sign out
         setRole(null)
+        hasFetchedRole.current = false
       }
       
       setLoading(false)
