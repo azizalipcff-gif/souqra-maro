@@ -2,7 +2,7 @@
 
 import Link from "next/link"
 import { motion, AnimatePresence } from "framer-motion"
-import { ShoppingCart, Heart, Menu, X, LogOut, LayoutDashboard, Shield, UserCircle } from "lucide-react"
+import { ShoppingCart, Heart, Menu, X, LogOut, LayoutDashboard, Shield, UserCircle, Settings, Package, Store, Edit } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { DarkModeToggle } from "@/components/ui/dark-mode-toggle"
 import { SearchBar } from "@/components/marketplace/SearchBar"
@@ -132,7 +132,34 @@ export function Header() {
                         onClick={() => setIsProfileDropdownOpen(false)}
                       >
                         <UserCircle className="mr-2 h-4 w-4" />
-                        Profile
+                        My Profile
+                      </Link>
+
+                      <Link
+                        href="/profile/settings"
+                        className="flex items-center px-4 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-slate-800 transition-colors"
+                        onClick={() => setIsProfileDropdownOpen(false)}
+                      >
+                        <Edit className="mr-2 h-4 w-4" />
+                        Edit Profile
+                      </Link>
+
+                      <Link
+                        href="/add-product"
+                        className="flex items-center px-4 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-slate-800 transition-colors"
+                        onClick={() => setIsProfileDropdownOpen(false)}
+                      >
+                        <Package className="mr-2 h-4 w-4" />
+                        Add Product
+                      </Link>
+
+                      <Link
+                        href="/add-business"
+                        className="flex items-center px-4 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-slate-800 transition-colors"
+                        onClick={() => setIsProfileDropdownOpen(false)}
+                      >
+                        <Store className="mr-2 h-4 w-4" />
+                        Add Business
                       </Link>
 
                       {isBusinessOwner && isBusinessOwner() && (

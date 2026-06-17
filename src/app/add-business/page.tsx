@@ -1,8 +1,9 @@
 "use client"
 
-import { useState, useEffect, useCallback } from "react"
+import { useState, useEffect } from "react"
+import { useAuth } from "@/contexts/AuthContext"
 import { useRouter } from "next/navigation"
-import { Loader2, Building2, MapPin, Phone, FileText, CheckCircle, Upload, X, Image as ImageIcon } from "lucide-react"
+import { Loader2, Building2, MapPin, Phone, FileText, CheckCircle, Upload, X, Image as ImageIcon, ArrowLeft, Plus, Store } from "lucide-react"
 import { Header } from "@/components/layout/header"
 import { Footer } from "@/components/layout/footer"
 import { Button } from "@/components/ui/button"
@@ -10,8 +11,9 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Card, CardContent } from "@/components/ui/card"
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { createClient } from '@/utils/supabase/client'
+import Link from "next/link"
 
 const BUSINESS_CATEGORIES = [
   "Restaurants",
@@ -36,564 +38,344 @@ const MOROCCAN_CITIES = [
 ]
 
 export default function AddBusinessPage() {
+  const { user } = useAuth()
   const router = useRouter()
-  const [isLoading, setIsLoading] = useState(true)
-  const [isAuthenticated, setIsAuthenticated] = useState(false)
-  const [isSubmitting, setIsSubmitting] = useState(false)
-  const [isSuccess, setIsSuccess] = useState(false)
+  const supabase = createClient()
+  const [loading, setLoading] = useState(false)
+  const [success, setSuccess] = useState(false)
   const [error, setError] = useState("")
-  const [userId, setUserId] = useState<string | null>(null)
 
   const [formData, setFormData] = useState({
     business_name: "",
     category: "",
     city: "",
     phone: "",
-    description: ""
+    whatsapp: "",
+    description: "",
+    logo_url: "",
+    cover_url: ""
   })
 
-  const [logoFile, setLogoFile] = useState<File | null>(null)
-  const [coverFile, setCoverFile] = useState<File | null>(null)
-  const [logoPreview, setLogoPreview] = useState<string | null>(null)
-  const [coverPreview, setCoverPreview] = useState<string | null>(null)
-  const [uploadProgress, setUploadProgress] = useState<{ logo: number, cover: number }>({ logo: 0, cover: 0 })
-  const [uploadError, setUploadError] = useState("")
-
-  const checkAuth = useCallback(async () => {
-    try {
-      console.log("=== ADD BUSINESS AUTH CHECK ===")
-      const supabase = createClient()
-      
-      // Wait for session to be available
-      let retries = 0
-      let session = null
-      
-      while (retries < 3 && !session) {
-        const { data } = await supabase.auth.getSession()
-        session = data?.session
-        if (!session) {
-          await new Promise(resolve => setTimeout(resolve, 200))
-          retries++
-        }
-      }
-      
-      console.log("Session:", session)
-      console.log("Session user:", session?.user)
-      console.log("User ID:", session?.user?.id)
-      
-      if (!session?.user) {
-        console.log("No authenticated user found after retries")
-        setIsAuthenticated(false)
-        setIsLoading(false)
-        // Do NOT redirect aggressively - show error message instead
-        setError('You need to be logged in to add a business')
-        return
-      }
-
-      setIsAuthenticated(true)
-      setUserId(session.user.id)
-      console.log("User ID set to:", session.user.id)
-    } catch (error) {
-      console.error('Auth check error:', error)
-      setIsAuthenticated(false)
-      setIsLoading(false)
-      setError('Authentication error')
-    } finally {
-      setIsLoading(false)
-    }
-  }, [])
+  const [imagePreview, setImagePreview] = useState<{ logo: string, cover: string }>({ logo: '', cover: '' })
+  const [imageInput, setImageInput] = useState('')
+  const [imageType, setImageType] = useState<'logo' | 'cover'>('logo')
 
   useEffect(() => {
-    checkAuth()
-  }, [checkAuth])
-
-  const handleLogoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0]
-    if (!file) return
-
-    // Validate file type
-    const allowedTypes = ["image/jpeg", "image/jpg", "image/png", "image/webp"]
-    if (!allowedTypes.includes(file.type)) {
-      setUploadError("Invalid file type. Only JPG, JPEG, PNG, and WebP are allowed.")
+    if (!user) {
+      router.push('/login')
       return
     }
+  }, [user])
 
-    // Validate file size (5MB)
-    if (file.size > 5 * 1024 * 1024) {
-      setUploadError("File size exceeds 5MB limit.")
-      return
+  const handleImageAdd = () => {
+    if (imageInput) {
+      if (imageType === 'logo') {
+        setImagePreview({ ...imagePreview, logo: imageInput })
+        setFormData({ ...formData, logo_url: imageInput })
+      } else {
+        setImagePreview({ ...imagePreview, cover: imageInput })
+        setFormData({ ...formData, cover_url: imageInput })
+      }
+      setImageInput('')
     }
-
-    setUploadError("")
-    setLogoFile(file)
-    
-    // Create preview
-    const reader = new FileReader()
-    reader.onloadend = () => {
-      setLogoPreview(reader.result as string)
-    }
-    reader.readAsDataURL(file)
   }
 
-  const handleCoverChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0]
-    if (!file) return
-
-    // Validate file type
-    const allowedTypes = ["image/jpeg", "image/jpg", "image/png", "image/webp"]
-    if (!allowedTypes.includes(file.type)) {
-      setUploadError("Invalid file type. Only JPG, JPEG, PNG, and WebP are allowed.")
-      return
+  const handleImageRemove = (type: 'logo' | 'cover') => {
+    if (type === 'logo') {
+      setImagePreview({ ...imagePreview, logo: '' })
+      setFormData({ ...formData, logo_url: '' })
+    } else {
+      setImagePreview({ ...imagePreview, cover: '' })
+      setFormData({ ...formData, cover_url: '' })
     }
-
-    // Validate file size (5MB)
-    if (file.size > 5 * 1024 * 1024) {
-      setUploadError("File size exceeds 5MB limit.")
-      return
-    }
-
-    setUploadError("")
-    setCoverFile(file)
-    
-    // Create preview
-    const reader = new FileReader()
-    reader.onloadend = () => {
-      setCoverPreview(reader.result as string)
-    }
-    reader.readAsDataURL(file)
-  }
-
-  const removeLogo = () => {
-    setLogoFile(null)
-    setLogoPreview(null)
-  }
-
-  const removeCover = () => {
-    setCoverFile(null)
-    setCoverPreview(null)
   }
 
   const handleSubmit = async (e: React.FormEvent) => {
-    console.log("🔥🔥🔥 handleSubmit TRIGGERED 🔥🔥🔥")
     e.preventDefault()
-    setError("")
-    setUploadError("")
-
-    console.log("=== ADD BUSINESS SUBMISSION DEBUG ===")
-    console.log("Current userId state:", userId)
-    console.log("userId type:", typeof userId)
-    console.log("userId is null:", userId === null)
-    console.log("userId is undefined:", userId === undefined)
-    console.log("Form data:", formData)
-
-    // Validate required fields
-    if (!formData.business_name || !formData.category || !formData.city || !formData.phone || !formData.description) {
-      setError("Please fill in all required fields")
-      return
-    }
-
-    if (!userId) {
-      console.log("❌ userId is null/undefined - Cannot submit")
-      setError("Authentication error. Please log in again.")
-      return
-    }
-
-    setIsSubmitting(true)
+    setError('')
+    setSuccess(false)
+    setLoading(true)
 
     try {
-      const supabase = createClient()
+      if (!formData.business_name || !formData.category || !formData.city || !formData.phone || !formData.description) {
+        setError('Please fill in all required fields')
+        setLoading(false)
+        return
+      }
 
-      // Check current session
-      const { data: { session } } = await supabase.auth.getSession()
-      console.log("=== SESSION DEBUG ===")
-      console.log("Session exists:", !!session)
-      console.log("Session:", session)
-      console.log("Session user:", session?.user)
-      console.log("Session user ID:", session?.user?.id)
-      console.log("auth.uid() would return:", session?.user?.id)
-
-      const payload = {
-        user_id: userId,
-        business_name: formData.business_name,
+      const { error } = await supabase.from('businesses').insert({
+        owner_id: user?.id,
+        name: formData.business_name,
         category: formData.category,
         city: formData.city,
         phone: formData.phone,
+        whatsapp: formData.whatsapp,
         description: formData.description,
-        approved: false
+        logo_url: formData.logo_url,
+        cover_url: formData.cover_url,
+        approved: false,
+        status: 'pending'
+      })
+
+      if (error) {
+        setError('Failed to create business')
+        console.error('Error creating business:', error)
+      } else {
+        setSuccess(true)
+        setTimeout(() => {
+          router.push('/profile')
+        }, 2000)
       }
-      console.log("=== PAYLOAD DEBUG ===")
-      console.log("Payload:", payload)
-      console.log("Payload user_id:", payload.user_id)
-      console.log("Payload user_id type:", typeof payload.user_id)
-
-      // First, create the business record to get the ID
-      console.log("=== SUPABASE INSERT DEBUG ===")
-      console.log("Executing insert query...")
-      const { data: businessData, error: insertError } = await supabase
-        .from('businesses')
-        .insert(payload)
-        .select()
-        .single()
-
-      console.log("Insert result:", businessData)
-      console.log("Insert error:", insertError)
-
-      if (insertError) {
-        console.error("=== INSERT ERROR DETAILS ===")
-        console.error("Error message:", insertError.message)
-        console.error("Error code:", insertError.code)
-        console.error("Error details:", insertError.details)
-        console.error("Error hint:", insertError.hint)
-        console.error("Full error object:", insertError)
-        throw insertError
-      }
-
-      const businessId = businessData.id
-      console.log("✅ Business inserted successfully with ID:", businessId)
-
-      // Upload logo if provided
-      let logoUrl = null
-      if (logoFile) {
-        try {
-          const formData = new FormData()
-          formData.append('file', logoFile)
-          formData.append('folder', `businesses/${businessId}`)
-          
-          const uploadResponse = await fetch('/api/upload', {
-            method: 'POST',
-            body: formData,
-          })
-          
-          if (uploadResponse.ok) {
-            const uploadData = await uploadResponse.json()
-            logoUrl = uploadData.url
-          }
-        } catch (error) {
-          console.error('Logo upload error:', error)
-          setUploadError("Failed to upload logo. Business created without logo.")
-        }
-      }
-
-      // Upload cover if provided
-      let coverUrl = null
-      if (coverFile) {
-        try {
-          const formData = new FormData()
-          formData.append('file', coverFile)
-          formData.append('folder', `businesses/${businessId}`)
-          
-          const uploadResponse = await fetch('/api/upload', {
-            method: 'POST',
-            body: formData,
-          })
-          
-          if (uploadResponse.ok) {
-            const uploadData = await uploadResponse.json()
-            coverUrl = uploadData.url
-          }
-        } catch (error) {
-          console.error('Cover upload error:', error)
-          setUploadError("Failed to upload cover image. Business created without cover.")
-        }
-      }
-
-      // Update business with image URLs
-      if (logoUrl || coverUrl) {
-        const updateData: any = {}
-        if (logoUrl) updateData.logo_url = logoUrl
-        if (coverUrl) updateData.cover_url = coverUrl
-
-        const { error: updateError } = await supabase
-          .from('businesses')
-          .update(updateData)
-          .eq('id', businessId)
-
-        if (updateError) throw updateError
-      }
-
-      setIsSuccess(true)
-      setTimeout(() => {
-        router.push('/businesses')
-      }, 2000)
     } catch (error) {
+      setError('Failed to create business')
       console.error('Error creating business:', error)
-      setError("Failed to submit business. Please try again.")
     } finally {
-      setIsSubmitting(false)
+      setLoading(false)
     }
   }
 
-  if (isLoading) {
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-white via-blue-50 to-white">
-        <Header />
-        <div className="container mx-auto px-4 py-16">
-          <div className="flex justify-center">
-            <Loader2 className="h-8 w-8 animate-spin text-blue-600" />
-          </div>
-        </div>
-        <Footer />
-      </div>
-    )
-  }
-
-  if (!isAuthenticated) {
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-white via-blue-50 to-white">
-        <Header />
-        <div className="container mx-auto px-4 py-16">
-          <div className="text-center">
-            <p className="text-gray-600">Redirecting to login...</p>
-          </div>
-        </div>
-        <Footer />
-      </div>
-    )
-  }
-
-  if (isSuccess) {
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-white via-blue-50 to-white">
-        <Header />
-        <div className="container mx-auto px-4 py-12">
-          <div className="max-w-2xl mx-auto">
-            <Card className="border-2 border-green-200">
-              <CardContent className="p-12 text-center">
-                <div className="w-20 h-20 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-6">
-                  <CheckCircle className="h-10 w-10 text-green-600" />
-                </div>
-                <h1 className="text-3xl font-bold text-gray-900 mb-4">
-                  Business Submitted Successfully
-                </h1>
-                <p className="text-lg text-gray-600 mb-8">
-                  Your business has been submitted for review. We will review your submission and approve it shortly.
-                </p>
-                <div className="flex gap-4 justify-center">
-                  <Button onClick={() => router.push('/profile')}>
-                    Back to Profile
-                  </Button>
-                  <Button variant="outline" onClick={() => router.push('/marketplace')}>
-                    Browse Marketplace
-                  </Button>
-                </div>
-              </CardContent>
-            </Card>
-          </div>
-        </div>
-        <Footer />
-      </div>
-    )
+  if (!user) {
+    return null
   }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-white via-blue-50 to-white">
       <Header />
-      <div className="container mx-auto px-4 py-12">
-        <div className="max-w-2xl mx-auto">
-          <div className="mb-8">
-            <h1 className="text-3xl font-bold text-gray-900 mb-2">Add Your Business</h1>
-            <p className="text-gray-600">Fill in the details below to list your business on SOUQORA</p>
+      <div className="container mx-auto px-4 py-16">
+        <div className="max-w-3xl mx-auto space-y-6">
+          {/* Header */}
+          <div className="flex items-center space-x-4">
+            <Link href="/profile">
+              <Button variant="ghost" size="icon">
+                <ArrowLeft className="h-5 w-5" />
+              </Button>
+            </Link>
+            <div>
+              <h1 className="text-3xl font-bold text-gray-900">Add Business</h1>
+              <p className="text-gray-600">List your business on the marketplace</p>
+            </div>
           </div>
 
-          <Card className="shadow-lg">
-            <CardContent className="p-8">
+          {/* Business Form */}
+          <Card className="shadow-lg border-0">
+            <CardHeader>
+              <CardTitle className="flex items-center">
+                <Store className="h-5 w-5 mr-2" />
+                Business Details
+              </CardTitle>
+              <CardDescription>Fill in your business information</CardDescription>
+            </CardHeader>
+            <CardContent>
               <form onSubmit={handleSubmit} className="space-y-6">
-                {error && (
-                  <div className="p-4 bg-red-50 border border-red-200 rounded-lg">
-                    <p className="text-sm text-red-800">{error}</p>
-                  </div>
-                )}
-
-                {uploadError && (
-                  <div className="p-4 bg-red-50 border border-red-200 rounded-lg">
-                    <p className="text-sm text-red-800">{uploadError}</p>
-                  </div>
-                )}
-
-                <div>
+                {/* Business Name */}
+                <div className="space-y-2">
                   <Label htmlFor="business_name">Business Name *</Label>
-                  <div className="relative">
-                    <Building2 className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
-                    <Input
-                      id="business_name"
-                      value={formData.business_name}
-                      onChange={(e) => setFormData({ ...formData, business_name: e.target.value })}
-                      className="pl-10"
-                      placeholder="Enter your business name"
-                      required
-                    />
-                  </div>
+                  <Input
+                    id="business_name"
+                    type="text"
+                    placeholder="Enter your business name"
+                    value={formData.business_name}
+                    onChange={(e) => setFormData({ ...formData, business_name: e.target.value })}
+                    className="h-11"
+                    required
+                  />
                 </div>
 
-                <div>
+                {/* Category */}
+                <div className="space-y-2">
                   <Label htmlFor="category">Category *</Label>
-                  <Select value={formData.category} onValueChange={(value) => setFormData({ ...formData, category: value })}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select your business category" />
+                  <Select value={formData.category} onValueChange={(value) => setFormData({ ...formData, category: value })} required>
+                    <SelectTrigger className="h-11">
+                      <SelectValue placeholder="Select a category" />
                     </SelectTrigger>
                     <SelectContent>
-                      {BUSINESS_CATEGORIES.map((category) => (
-                        <SelectItem key={category} value={category}>
-                          {category}
-                        </SelectItem>
+                      {BUSINESS_CATEGORIES.map(category => (
+                        <SelectItem key={category} value={category}>{category}</SelectItem>
                       ))}
                     </SelectContent>
                   </Select>
                 </div>
 
-                <div>
+                {/* City */}
+                <div className="space-y-2">
                   <Label htmlFor="city">City *</Label>
-                  <div className="relative">
-                    <MapPin className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400 z-10" />
-                    <Select value={formData.city} onValueChange={(value) => setFormData({ ...formData, city: value })}>
-                      <SelectTrigger className="pl-10">
-                        <SelectValue placeholder="Select your city" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {MOROCCAN_CITIES.map((city) => (
-                          <SelectItem key={city} value={city}>
-                            {city}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
+                  <Select value={formData.city} onValueChange={(value) => setFormData({ ...formData, city: value })} required>
+                    <SelectTrigger className="h-11">
+                      <SelectValue placeholder="Select your city" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {MOROCCAN_CITIES.map(city => (
+                        <SelectItem key={city} value={city}>{city}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 </div>
 
-                <div>
+                {/* Phone */}
+                <div className="space-y-2">
                   <Label htmlFor="phone">Phone Number *</Label>
-                  <div className="relative">
-                    <Phone className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
-                    <Input
-                      id="phone"
-                      type="tel"
-                      value={formData.phone}
-                      onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-                      className="pl-10"
-                      placeholder="+212 XXX XXX XXX"
-                      required
-                    />
-                  </div>
+                  <Input
+                    id="phone"
+                    type="tel"
+                    placeholder="+212 6XX XXX XXX"
+                    value={formData.phone}
+                    onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+                    className="h-11"
+                    required
+                  />
                 </div>
 
-                <div>
+                {/* WhatsApp */}
+                <div className="space-y-2">
+                  <Label htmlFor="whatsapp">WhatsApp Number</Label>
+                  <Input
+                    id="whatsapp"
+                    type="tel"
+                    placeholder="+212 6XX XXX XXX"
+                    value={formData.whatsapp}
+                    onChange={(e) => setFormData({ ...formData, whatsapp: e.target.value })}
+                    className="h-11"
+                  />
+                </div>
+
+                {/* Description */}
+                <div className="space-y-2">
                   <Label htmlFor="description">Description *</Label>
-                  <div className="relative">
-                    <FileText className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
-                    <Textarea
-                      id="description"
-                      value={formData.description}
-                      onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                      className="pl-10 min-h-[120px]"
-                      placeholder="Describe your business in a few sentences..."
-                      required
+                  <Textarea
+                    id="description"
+                    placeholder="Describe your business in detail..."
+                    value={formData.description}
+                    onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                    rows={4}
+                    className="resize-none"
+                    required
+                  />
+                  <p className="text-sm text-gray-500">{formData.description.length}/500 characters</p>
+                </div>
+
+                {/* Logo */}
+                <div className="space-y-4">
+                  <Label>Business Logo</Label>
+                  <div className="flex space-x-2">
+                    <Input
+                      type="url"
+                      placeholder="Enter logo URL"
+                      value={imageType === 'logo' ? imageInput : ''}
+                      onChange={(e) => {
+                        setImageInput(e.target.value)
+                        setImageType('logo')
+                      }}
+                      className="flex-1 h-11"
                     />
+                    <Button
+                      type="button"
+                      onClick={() => setImageType('logo')}
+                      className="h-11"
+                    >
+                      <Plus className="h-4 w-4 mr-2" />
+                      Add Logo
+                    </Button>
                   </div>
-                </div>
-
-                {/* Logo Upload */}
-                <div>
-                  <Label>Business Logo (Optional)</Label>
-                  <p className="text-sm text-gray-500 mb-2">Upload your business logo. JPG, JPEG, PNG, or WebP. Max 5MB.</p>
                   
-                  {logoPreview ? (
-                    <div className="relative mt-2">
+                  {imagePreview.logo && (
+                    <div className="relative inline-block">
                       <img
-                        src={logoPreview}
+                        src={imagePreview.logo}
                         alt="Logo preview"
-                        className="w-32 h-32 object-contain border-2 border-gray-200 rounded-lg"
+                        className="w-32 h-32 object-contain rounded-lg border"
                       />
-                      <Button
+                      <button
                         type="button"
-                        variant="danger"
-                        size="icon"
-                        className="absolute -top-2 -right-2 h-6 w-6"
-                        onClick={removeLogo}
+                        onClick={() => handleImageRemove('logo')}
+                        className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-1"
                       >
-                        <X className="h-4 w-4" />
-                      </Button>
-                    </div>
-                  ) : (
-                    <div className="mt-2">
-                      <label htmlFor="logo-upload" className="cursor-pointer">
-                        <div className="border-2 border-dashed border-gray-300 rounded-lg p-8 text-center hover:border-blue-400 transition-colors">
-                          <ImageIcon className="h-8 w-8 text-gray-400 mx-auto mb-2" />
-                          <p className="text-sm text-gray-600">Click to upload logo</p>
-                          <p className="text-xs text-gray-400 mt-1">JPG, JPEG, PNG, WebP (max 5MB)</p>
-                        </div>
-                      </label>
-                      <input
-                        id="logo-upload"
-                        type="file"
-                        accept="image/jpeg,image/jpg,image/png,image/webp"
-                        onChange={handleLogoChange}
-                        className="hidden"
-                      />
+                        <X className="h-3 w-3" />
+                      </button>
                     </div>
                   )}
                 </div>
 
-                {/* Cover Upload */}
-                <div>
-                  <Label>Cover Image (Optional)</Label>
-                  <p className="text-sm text-gray-500 mb-2">Upload a cover image for your business. JPG, JPEG, PNG, or WebP. Max 5MB.</p>
+                {/* Cover */}
+                <div className="space-y-4">
+                  <Label>Cover Image</Label>
+                  <div className="flex space-x-2">
+                    <Input
+                      type="url"
+                      placeholder="Enter cover image URL"
+                      value={imageType === 'cover' ? imageInput : ''}
+                      onChange={(e) => {
+                        setImageInput(e.target.value)
+                        setImageType('cover')
+                      }}
+                      className="flex-1 h-11"
+                    />
+                    <Button
+                      type="button"
+                      onClick={() => setImageType('cover')}
+                      className="h-11"
+                    >
+                      <Plus className="h-4 w-4 mr-2" />
+                      Add Cover
+                    </Button>
+                  </div>
                   
-                  {coverPreview ? (
-                    <div className="relative mt-2">
+                  {imagePreview.cover && (
+                    <div className="relative">
                       <img
-                        src={coverPreview}
+                        src={imagePreview.cover}
                         alt="Cover preview"
-                        className="w-full h-48 object-cover border-2 border-gray-200 rounded-lg"
+                        className="w-full h-48 object-cover rounded-lg border"
                       />
-                      <Button
+                      <button
                         type="button"
-                        variant="danger"
-                        size="icon"
-                        className="absolute top-2 right-2"
-                        onClick={removeCover}
+                        onClick={() => handleImageRemove('cover')}
+                        className="absolute top-2 right-2 bg-red-500 text-white rounded-full p-1"
                       >
-                        <X className="h-4 w-4" />
-                      </Button>
-                    </div>
-                  ) : (
-                    <div className="mt-2">
-                      <label htmlFor="cover-upload" className="cursor-pointer">
-                        <div className="border-2 border-dashed border-gray-300 rounded-lg p-8 text-center hover:border-blue-400 transition-colors">
-                          <ImageIcon className="h-8 w-8 text-gray-400 mx-auto mb-2" />
-                          <p className="text-sm text-gray-600">Click to upload cover image</p>
-                          <p className="text-xs text-gray-400 mt-1">JPG, JPEG, PNG, WebP (max 5MB)</p>
-                        </div>
-                      </label>
-                      <input
-                        id="cover-upload"
-                        type="file"
-                        accept="image/jpeg,image/jpg,image/png,image/webp"
-                        onChange={handleCoverChange}
-                        className="hidden"
-                      />
+                        <X className="h-3 w-3" />
+                      </button>
                     </div>
                   )}
                 </div>
 
-                <Button 
-                  type="submit" 
-                  className="w-full bg-blue-600 hover:bg-blue-700"
-                  disabled={isSubmitting}
-                  onClick={(e) => {
-                    console.log("🔥 BUTTON CLICKED 🔥")
-                    console.log("isSubmitting:", isSubmitting)
-                    console.log("Button disabled:", isSubmitting)
-                  }}
-                >
-                  {isSubmitting ? (
-                    <>
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      Submitting...
-                    </>
-                  ) : (
-                    "Submit Business"
-                  )}
-                </Button>
+                {/* Error and Success Messages */}
+                {error && (
+                  <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg">
+                    {error}
+                  </div>
+                )}
+
+                {success && (
+                  <div className="bg-green-50 border border-green-200 text-green-700 px-4 py-3 rounded-lg flex items-center">
+                    <CheckCircle className="h-5 w-5 mr-2" />
+                    Business created successfully! Redirecting...
+                  </div>
+                )}
+
+                {/* Submit Button */}
+                <div className="flex justify-end space-x-4">
+                  <Link href="/profile">
+                    <Button variant="outline" className="h-11">
+                      Cancel
+                    </Button>
+                  </Link>
+                  <Button
+                    type="submit"
+                    disabled={loading}
+                    className="h-11 bg-blue-600 hover:bg-blue-700"
+                  >
+                    {loading ? (
+                      <>
+                        <Loader2 className="mr-2 h-5 w-5 animate-spin" />
+                        Creating Business...
+                      </>
+                    ) : (
+                      <>
+                        <Plus className="mr-2 h-5 w-5" />
+                        Create Business
+                      </>
+                    )}
+                  </Button>
+                </div>
               </form>
             </CardContent>
           </Card>

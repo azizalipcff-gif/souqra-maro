@@ -7,7 +7,7 @@ import { Header } from '@/components/layout/header'
 import { Footer } from '@/components/layout/footer'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
-import { MapPin, Briefcase, Package, Settings, LogOut, LayoutDashboard } from 'lucide-react'
+import { MapPin, Briefcase, Package, Settings, LogOut, LayoutDashboard, User, Phone, Calendar, Edit, Plus, Store, Heart, Eye } from 'lucide-react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 
@@ -19,6 +19,8 @@ interface Profile {
   city: string | null
   bio: string | null
   avatar_url: string | null
+  phone: string | null
+  created_at: string | null
 }
 
 interface Business {
@@ -91,7 +93,9 @@ export default function ProfilePage() {
           city: null,
           bio: null,
           avatar_url: null,
-          username: null
+          username: null,
+          phone: null,
+          created_at: new Date().toISOString()
         }
 
         const { error: insertError } = await supabase
@@ -171,9 +175,12 @@ export default function ProfilePage() {
   }
 
   const displayName = profile?.full_name || user.user_metadata?.full_name || user.user_metadata?.name || user.email || 'User'
+  const displayUsername = profile?.username || 'No username'
   const displayRole = profile?.role || 'client'
   const displayCity = profile?.city || 'Not specified'
   const displayBio = profile?.bio || 'No bio yet'
+  const displayPhone = profile?.phone || 'Not specified'
+  const displayJoinDate = profile?.created_at ? new Date(profile.created_at).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' }) : 'Unknown'
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-white via-blue-50 to-white">
@@ -186,37 +193,84 @@ export default function ProfilePage() {
             <CardHeader>
               <div className="flex items-start justify-between">
                 <div className="flex items-center space-x-4">
-                  <div className="h-20 w-20 rounded-full bg-gradient-to-br from-blue-600 to-purple-600 flex items-center justify-center text-white text-2xl font-bold">
-                    {displayName.charAt(0).toUpperCase()}
+                  <div className="h-24 w-24 rounded-full bg-gradient-to-br from-blue-600 to-purple-600 flex items-center justify-center text-white text-3xl font-bold shadow-lg">
+                    {profile?.avatar_url ? (
+                      <img src={profile.avatar_url} alt="Avatar" className="h-full w-full rounded-full object-cover" />
+                    ) : (
+                      displayName.charAt(0).toUpperCase()
+                    )}
                   </div>
                   <div>
                     <CardTitle className="text-2xl">{displayName}</CardTitle>
-                    <CardDescription className="text-base">{user.email}</CardDescription>
+                    <CardDescription className="text-base">@{displayUsername}</CardDescription>
+                    <CardDescription className="text-sm">{user.email}</CardDescription>
                     <div className="flex items-center space-x-2 mt-2">
-                      <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
-                        {displayRole}
+                      <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800 capitalize">
+                        {displayRole.replace('_', ' ')}
                       </span>
                     </div>
                   </div>
                 </div>
                 <Button variant="outline" size="sm" asChild>
                   <Link href="/profile/settings">
-                    <Settings className="h-4 w-4 mr-2" />
-                    Settings
+                    <Edit className="h-4 w-4 mr-2" />
+                    Edit Profile
                   </Link>
                 </Button>
               </div>
             </CardHeader>
             <CardContent className="space-y-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div className="flex items-center space-x-2 text-gray-600">
+                  <Phone className="h-4 w-4" />
+                  <span className="text-sm">{displayPhone}</span>
+                </div>
+                <div className="flex items-center space-x-2 text-gray-600">
+                  <MapPin className="h-4 w-4" />
+                  <span className="text-sm">{displayCity}</span>
+                </div>
+              </div>
               <div className="flex items-center space-x-2 text-gray-600">
-                <MapPin className="h-4 w-4" />
-                <span>{displayCity}</span>
+                <Calendar className="h-4 w-4" />
+                <span className="text-sm">Joined {displayJoinDate}</span>
               </div>
               <div className="text-gray-600">
-                <p>{displayBio}</p>
+                <p className="text-sm">{displayBio}</p>
               </div>
             </CardContent>
           </Card>
+
+          {/* Statistics Cards */}
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            <Card className="shadow-lg border-0 hover:shadow-xl transition-shadow">
+              <CardContent className="p-6 text-center">
+                <Package className="h-8 w-8 mx-auto mb-2 text-blue-600" />
+                <div className="text-2xl font-bold text-gray-900">{products.length}</div>
+                <div className="text-sm text-gray-600">Products</div>
+              </CardContent>
+            </Card>
+            <Card className="shadow-lg border-0 hover:shadow-xl transition-shadow">
+              <CardContent className="p-6 text-center">
+                <Store className="h-8 w-8 mx-auto mb-2 text-purple-600" />
+                <div className="text-2xl font-bold text-gray-900">{businesses.length}</div>
+                <div className="text-sm text-gray-600">Businesses</div>
+              </CardContent>
+            </Card>
+            <Card className="shadow-lg border-0 hover:shadow-xl transition-shadow">
+              <CardContent className="p-6 text-center">
+                <Eye className="h-8 w-8 mx-auto mb-2 text-green-600" />
+                <div className="text-2xl font-bold text-gray-900">0</div>
+                <div className="text-sm text-gray-600">Views</div>
+              </CardContent>
+            </Card>
+            <Card className="shadow-lg border-0 hover:shadow-xl transition-shadow">
+              <CardContent className="p-6 text-center">
+                <Heart className="h-8 w-8 mx-auto mb-2 text-red-600" />
+                <div className="text-2xl font-bold text-gray-900">0</div>
+                <div className="text-sm text-gray-600">Favorites</div>
+              </CardContent>
+            </Card>
+          </div>
 
           {/* Businesses Section */}
           {profile?.role === 'business_owner' && (
@@ -289,6 +343,24 @@ export default function ProfilePage() {
               <CardTitle>Quick Actions</CardTitle>
             </CardHeader>
             <CardContent className="space-y-2">
+              <Button variant="outline" className="w-full justify-start" asChild>
+                <Link href="/profile/settings">
+                  <Edit className="h-4 w-4 mr-2" />
+                  Edit Profile
+                </Link>
+              </Button>
+              <Button variant="outline" className="w-full justify-start" asChild>
+                <Link href="/add-product">
+                  <Plus className="h-4 w-4 mr-2" />
+                  Add Product
+                </Link>
+              </Button>
+              <Button variant="outline" className="w-full justify-start" asChild>
+                <Link href="/add-business">
+                  <Store className="h-4 w-4 mr-2" />
+                  Add Business
+                </Link>
+              </Button>
               {profile?.role === 'business_owner' && (
                 <Button variant="outline" className="w-full justify-start" asChild>
                   <Link href="/dashboard">
@@ -297,20 +369,6 @@ export default function ProfilePage() {
                   </Link>
                 </Button>
               )}
-              {profile?.role === 'business_owner' && (
-                <Button variant="outline" className="w-full justify-start" asChild>
-                  <Link href="/add-business">
-                    <Briefcase className="h-4 w-4 mr-2" />
-                    Add Business
-                  </Link>
-                </Button>
-              )}
-              <Button variant="outline" className="w-full justify-start" asChild>
-                <Link href="/add-product">
-                  <Package className="h-4 w-4 mr-2" />
-                  Add Product
-                </Link>
-              </Button>
               <Button
                 variant="outline"
                 className="w-full justify-start text-red-600 hover:text-red-700 hover:bg-red-50"
