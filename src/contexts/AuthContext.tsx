@@ -49,29 +49,29 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     } catch (error) {
       console.error('[AuthContext] Error fetching user role:', error)
       setRole('client')
-    }useEffect(() => {
-    let mounted = true
+    }
+  }
 
-    // Get initial session
+  useEffect(() => {
+    const mountedRef = { current: true }
+
     supabase.auth.getSession().then(async ({ data: { session } }) => {
-      if (!mounted) return
+      if (!mountedRef.current) return
       
       setSession(session)
       setUser(session?.user ?? null)
       
       if (session?.user) {
-        // كنحيدو await باش ما يحبسش الـ loading
         fetchUserRole(session.user.id)
       }
       
       setLoading(false)
     })
 
-    // Listen for auth changes
     const {
       data: { subscription },
     } = supabase.auth.onAuthStateChange(async (event, session) => {
-      if (!mounted) return
+      if (!mountedRef.current) return
       
       console.log('[AuthContext] Auth state changed:', event, !!session)
       
@@ -79,7 +79,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setUser(session?.user ?? null)
       
       if (session?.user) {
-        // حيدنا await هنايا باش غير تجي الـ Auth Token، يشعل الموقع والـ role يجي فـ الطريق
         fetchUserRole(session.user.id)
       } else {
         setRole(null)
@@ -89,15 +88,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     })
 
     return () => {
-      mounted = false
+      mountedRef.current = false
       subscription.unsubscribe()
     }
   }, [])
-    return () => {
-      mounted = false
-      subscription.unsubscribe()
-    }
-  }
 
   const signIn = async (email: string, password: string) => {
     const { error } = await supabase.auth.signInWithPassword({
@@ -105,7 +99,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       password,
     })
     if (error) throw error
-    // Auth listener will handle state updates
     router.push('/')
   }
 
@@ -120,7 +113,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       },
     })
     if (error) throw error
-    // Auth listener will handle state updates
     router.push('/')
   }
 
@@ -137,7 +129,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const signOut = async () => {
     try {
       await supabase.auth.signOut()
-      // Auth listener will handle state updates
       router.push('/')
     } catch (error) {
       console.error('[AuthContext] Error signing out:', error)
