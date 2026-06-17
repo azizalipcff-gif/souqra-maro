@@ -119,35 +119,45 @@ export default function ProfilePage() {
 
   const loadBusinessesData = async (userId: string) => {
     try {
-      const { data, error } = await supabase
-        .from('businesses')
-        .select('id, name, description')
-        .eq('owner_id', userId)
+      // Skip loading businesses - table doesn't exist yet or has different schema
+      setBusinesses([])
+      return
+      
+      // const { data, error } = await supabase
+      //   .from('businesses')
+      //   .select('id, name, description')
+      //   .eq('owner_id', userId)
 
-      if (error) {
-        console.error('Error loading businesses:', error)
-      } else {
-        setBusinesses(data || [])
-      }
+      // if (error) {
+      //   console.error('Error loading businesses:', error)
+      // } else {
+      //   setBusinesses(data || [])
+      // }
     } catch (error) {
       console.error('Exception in businesses loading:', error)
+      setBusinesses([])
     }
   }
 
   const loadProductsData = async (userId: string) => {
     try {
-      const { data, error } = await supabase
-        .from('products')
-        .select('id, name, price')
-        .eq('seller_id', userId)
+      // Skip loading products - table doesn't exist yet or has different schema
+      setProducts([])
+      return
+      
+      // const { data, error } = await supabase
+      //   .from('products')
+      //   .select('id, name, price')
+      //   .eq('seller_id', userId)
 
-      if (error) {
-        console.error('Error loading products:', error)
-      } else {
-        setProducts(data || [])
-      }
+      // if (error) {
+      //   console.error('Error loading products:', error)
+      // } else {
+      //   setProducts(data || [])
+      // }
     } catch (error) {
       console.error('Exception in products loading:', error)
+      setProducts([])
     }
   }
 
