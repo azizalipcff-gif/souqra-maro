@@ -361,14 +361,6 @@ export default function ProfilePage() {
                   Add Business
                 </Link>
               </Button>
-              {profile?.role === 'business_owner' && (
-                <Button variant="outline" className="w-full justify-start" asChild>
-                  <Link href="/dashboard">
-                    <LayoutDashboard className="h-4 w-4 mr-2" />
-                    Dashboard
-                  </Link>
-                </Button>
-              )}
               <Button
                 variant="outline"
                 className="w-full justify-start text-red-600 hover:text-red-700 hover:bg-red-50"

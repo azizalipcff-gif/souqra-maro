@@ -162,28 +162,6 @@ export function Header() {
                         Add Business
                       </Link>
 
-                      {isBusinessOwner && isBusinessOwner() && (
-                        <Link
-                          href="/dashboard"
-                          className="flex items-center px-4 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-slate-800 transition-colors"
-                          onClick={() => setIsProfileDropdownOpen(false)}
-                        >
-                          <LayoutDashboard className="mr-2 h-4 w-4" />
-                          Dashboard
-                        </Link>
-                      )}
-
-                      {isAdmin && isAdmin() && (
-                        <Link
-                          href="/admin"
-                          className="flex items-center px-4 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-slate-800 transition-colors"
-                          onClick={() => setIsProfileDropdownOpen(false)}
-                        >
-                          <Shield className="mr-2 h-4 w-4" />
-                          Admin Panel
-                        </Link>
-                      )}
-
                       <hr className="my-2 border-gray-100 dark:border-slate-800" />
 
                       <button
@@ -256,18 +234,6 @@ export function Header() {
                     <UserCircle className="mr-2 h-4 w-4" />
                     Profile
                   </Link>
-                  {isBusinessOwner && isBusinessOwner() && (
-                    <Link href="/dashboard" className="flex items-center text-foreground hover:text-royal-blue transition-colors font-medium" onClick={() => setIsMenuOpen(false)}>
-                      <LayoutDashboard className="mr-2 h-4 w-4" />
-                      Dashboard
-                    </Link>
-                  )}
-                  {isAdmin && isAdmin() && (
-                    <Link href="/admin" className="flex items-center text-foreground hover:text-royal-blue transition-colors font-medium" onClick={() => setIsMenuOpen(false)}>
-                      <Shield className="mr-2 h-4 w-4" />
-                      Admin Panel
-                    </Link>
-                  )}
                   <button onClick={handleSignOut} className="flex items-center text-red-600 hover:text-red-700 transition-colors font-medium">
                     <LogOut className="mr-2 h-4 w-4" />
                     Sign Out

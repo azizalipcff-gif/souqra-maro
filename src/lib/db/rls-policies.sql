@@ -8,6 +8,115 @@ ALTER TABLE business_services ENABLE ROW LEVEL SECURITY;
 ALTER TABLE business_tags ENABLE ROW LEVEL SECURITY;
 ALTER TABLE business_hours ENABLE ROW LEVEL SECURITY;
 
+-- Enable RLS on profiles table
+ALTER TABLE profiles ENABLE ROW LEVEL SECURITY;
+
+-- Enable RLS on products table
+ALTER TABLE products ENABLE ROW LEVEL SECURITY;
+
+-- ============================================
+-- PROFILES TABLE RLS POLICIES
+-- ============================================
+
+-- Allow users to view their own profile
+CREATE POLICY "Users can view own profile"
+ON profiles FOR SELECT
+USING (auth.uid() = id);
+
+-- Allow users to insert their own profile (on signup)
+CREATE POLICY "Users can create own profile"
+ON profiles FOR INSERT
+WITH CHECK (auth.uid() = id);
+
+-- Allow users to update their own profile
+CREATE POLICY "Users can update own profile"
+ON profiles FOR UPDATE
+USING (auth.uid() = id);
+
+-- Allow admins to view all profiles
+CREATE POLICY "Admins can view all profiles"
+ON profiles FOR SELECT
+USING (
+  EXISTS (
+    SELECT 1 FROM profiles
+    WHERE profiles.id = auth.uid()
+    AND profiles.role = 'admin'
+  )
+);
+
+-- Allow admins to update all profiles
+CREATE POLICY "Admins can update all profiles"
+ON profiles FOR UPDATE
+USING (
+  EXISTS (
+    SELECT 1 FROM profiles
+    WHERE profiles.id = auth.uid()
+    AND profiles.role = 'admin'
+  )
+);
+
+-- ============================================
+-- PRODUCTS TABLE RLS POLICIES
+-- ============================================
+
+-- Allow users to view their own products
+CREATE POLICY "Users can view own products"
+ON products FOR SELECT
+USING (auth.uid() = seller_id);
+
+-- Allow users to insert their own products
+CREATE POLICY "Users can create own products"
+ON products FOR INSERT
+WITH CHECK (auth.uid() = seller_id);
+
+-- Allow users to update their own products
+CREATE POLICY "Users can update own products"
+ON products FOR UPDATE
+USING (auth.uid() = seller_id);
+
+-- Allow users to delete their own products
+CREATE POLICY "Users can delete own products"
+ON products FOR DELETE
+USING (auth.uid() = seller_id);
+
+-- Allow admins to view all products
+CREATE POLICY "Admins can view all products"
+ON products FOR SELECT
+USING (
+  EXISTS (
+    SELECT 1 FROM profiles
+    WHERE profiles.id = auth.uid()
+    AND profiles.role = 'admin'
+  )
+);
+
+-- Allow admins to update all products
+CREATE POLICY "Admins can update all products"
+ON products FOR UPDATE
+USING (
+  EXISTS (
+    SELECT 1 FROM profiles
+    WHERE profiles.id = auth.uid()
+    AND profiles.role = 'admin'
+  )
+);
+
+-- Allow admins to delete all products
+CREATE POLICY "Admins can delete all products"
+ON products FOR DELETE
+USING (
+  EXISTS (
+    SELECT 1 FROM profiles
+    WHERE profiles.id = auth.uid()
+    AND profiles.role = 'admin'
+  )
+);
+
+-- Allow public to view all active products
+CREATE POLICY "Public can view all products"
+ON products FOR SELECT
+USING (true);
+
 -- ============================================
 -- BUSINESSES TABLE RLS POLICIES
 -- ============================================
