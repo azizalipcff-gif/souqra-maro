@@ -1,5 +1,6 @@
 "use client"
 
+import { useEffect, useState } from 'react'
 import { Header } from '@/components/layout/header'
 import { Footer } from '@/components/layout/footer'
 import { SearchBar } from '@/components/marketplace/SearchBar'
@@ -7,8 +8,9 @@ import { BusinessCard } from '@/components/marketplace/BusinessCard'
 import { ProductCard } from '@/components/marketplace/ProductCard'
 import { CategoryCard } from '@/components/marketplace/CategoryCard'
 import { Button } from '@/components/ui/button'
-import { Building2, ShoppingBag, TrendingUp, Star, ArrowRight } from 'lucide-react'
+import { Building2, ShoppingBag, TrendingUp, Star, ArrowRight, Loader2 } from 'lucide-react'
 import Link from 'next/link'
+import { createClient } from '@/utils/supabase/client'
 
 // Mock data - will be replaced with Supabase data
 const mockCategories = [
@@ -127,6 +129,34 @@ const mockProducts = [
 ]
 
 export default function MarketplacePage() {
+  const supabase = createClient()
+  const [businesses, setBusinesses] = useState<any[]>([])
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    const fetchBusinesses = async () => {
+      try {
+        const { data, error } = await supabase
+          .from('businesses')
+          .select('*')
+          .eq('status', 'active')
+          .order('created_at', { ascending: false })
+
+        if (error) {
+          console.error('Error fetching businesses:', error)
+        } else {
+          setBusinesses(data || [])
+        }
+      } catch (error) {
+        console.error('Error fetching businesses:', error)
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    fetchBusinesses()
+  }, [supabase])
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-white via-blue-50 to-white">
       <Header />
@@ -210,9 +240,31 @@ export default function MarketplacePage() {
             </Link>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-            {mockBusinesses.map((business) => (
-              <BusinessCard key={business.id} {...business} />
-            ))}
+            {loading ? (
+              <div className="col-span-4 flex items-center justify-center py-12">
+                <Loader2 className="h-8 w-8 animate-spin text-blue-600" />
+              </div>
+            ) : businesses.length > 0 ? (
+              businesses.map((business) => (
+                <BusinessCard 
+                  key={business.id} 
+                  id={business.id}
+                  name={business.title}
+                  description={business.description}
+                  logo={business.image_url}
+                  cover={business.image_url}
+                  category={business.category}
+                  city={business.city}
+                  rating={0}
+                  reviewsCount={0}
+                  verified={false}
+                />
+              ))
+            ) : (
+              <div className="col-span-4 text-center py-12 text-gray-600">
+                No businesses found
+              </div>
+            )}
           </div>
         </div>
       </section>

@@ -1,9 +1,9 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import Link from "next/link"
 import { motion } from "framer-motion"
-import { Search, SlidersHorizontal, MapPin, Star, Phone, MessageCircle, CheckCircle } from "lucide-react"
+import { Search, SlidersHorizontal, MapPin, Star, Phone, MessageCircle, CheckCircle, Loader2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
@@ -11,6 +11,7 @@ import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Header } from "@/components/layout/header"
 import { Footer } from "@/components/layout/footer"
+import { createClient } from "@/utils/supabase/client"
 
 const services = [
   {
@@ -123,11 +124,38 @@ const locations = [
 ]
 
 export default function ServicesPage() {
+  const supabase = createClient()
+  const [services, setServices] = useState<any[]>([])
+  const [loading, setLoading] = useState(true)
   const [searchQuery, setSearchQuery] = useState("")
   const [selectedCategory, setSelectedCategory] = useState("All Categories")
   const [selectedLocation, setSelectedLocation] = useState("All Morocco")
   const [sortBy, setSortBy] = useState("rating")
   const [showFilters, setShowFilters] = useState(false)
+
+  useEffect(() => {
+    const fetchServices = async () => {
+      try {
+        const { data, error } = await supabase
+          .from('services')
+          .select('*')
+          .eq('status', 'active')
+          .order('created_at', { ascending: false })
+
+        if (error) {
+          console.error('Error fetching services:', error)
+        } else {
+          setServices(data || [])
+        }
+      } catch (error) {
+        console.error('Error fetching services:', error)
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    fetchServices()
+  }, [supabase])
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-white via-blue-50 to-white">
@@ -255,67 +283,79 @@ export default function ServicesPage() {
 
           {/* Services Grid */}
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {services.map((service, index) => (
-              <motion.div
-                key={service.id}
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: index * 0.05 }}
-                whileHover={{ y: -5 }}
-              >
-                <Link href={`/services/${service.id}`}>
-                  <Card className="overflow-hidden hover:shadow-2xl transition-all duration-300 border-2 border-transparent hover:border-gold h-full">
-                    <div className="relative h-48 overflow-hidden">
-                      <img
-                        src={service.image}
-                        alt={service.title}
-                        className="w-full h-full object-cover hover:scale-110 transition-transform duration-300"
-                      />
-                      {service.featured && (
-                        <Badge className="absolute top-3 right-3" variant="gold">
-                          Featured
-                        </Badge>
-                      )}
-                      {service.verified && (
-                        <Badge className="absolute top-3 left-3" variant="success">
-                          <CheckCircle className="w-3 h-3 mr-1" />
-                          Verified
-                        </Badge>
-                      )}
-                    </div>
-                    <CardHeader>
-                      <div className="flex items-start justify-between mb-2">
-                        <Badge variant="outline">{service.category}</Badge>
-                        <div className="flex items-center gap-1 text-sm">
-                          <Star className="h-4 w-4 fill-gold text-gold" />
-                          <span className="font-semibold">{service.rating}</span>
-                          <span className="text-gray-500">({service.reviews})</span>
+            {loading ? (
+              <div className="col-span-3 flex items-center justify-center py-12">
+                <Loader2 className="h-8 w-8 animate-spin text-blue-600" />
+              </div>
+            ) : services.length > 0 ? (
+              services.map((service, index) => (
+                <motion.div
+                  key={service.id}
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: index * 0.05 }}
+                  whileHover={{ y: -5 }}
+                >
+                  <Link href={`/services/${service.id}`}>
+                    <Card className="overflow-hidden hover:shadow-2xl transition-all duration-300 border-2 border-transparent hover:border-gold h-full">
+                      <div className="relative h-48 overflow-hidden">
+                        <img
+                          src={service.image_url || 'https://images.unsplash.com/photo-1581092921461-eab62e97a780?w=400'}
+                          alt={service.title}
+                          className="w-full h-full object-cover hover:scale-110 transition-transform duration-300"
+                        />
+                        {service.featured && (
+                          <Badge className="absolute top-3 right-3" variant="gold">
+                            Featured
+                          </Badge>
+                        )}
+                        {service.verified && (
+                          <Badge className="absolute top-3 left-3" variant="success">
+                            <CheckCircle className="w-3 h-3 mr-1" />
+                            Verified
+                          </Badge>
+                        )}
+                      </div>
+                      <CardHeader>
+                        <div className="flex items-start justify-between mb-2">
+                          <Badge variant="outline">{service.category}</Badge>
+                          <div className="flex items-center gap-1 text-sm">
+                            <Star className="h-4 w-4 fill-gold text-gold" />
+                            <span className="font-semibold">{service.rating || 0}</span>
+                            <span className="text-gray-500">({service.reviews_count || 0})</span>
+                          </div>
                         </div>
-                      </div>
-                      <CardTitle className="text-xl">{service.title}</CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                      <p className="text-gray-600 text-sm mb-4 line-clamp-2">
-                        {service.description}
-                      </p>
-                      <div className="flex items-center gap-2 text-gray-500 mb-4">
-                        <MapPin className="h-4 w-4" />
-                        <span className="text-sm">{service.location}</span>
-                      </div>
-                      <div className="flex gap-2">
-                        <Button className="flex-1" variant="gold">
-                          <MessageCircle className="mr-2 h-4 w-4" />
-                          WhatsApp
-                        </Button>
-                        <Button variant="outline" size="icon">
-                          <Phone className="h-4 w-4" />
-                        </Button>
-                      </div>
-                    </CardContent>
-                  </Card>
-                </Link>
-              </motion.div>
-            ))}
+                        <CardTitle className="text-xl">{service.title}</CardTitle>
+                      </CardHeader>
+                      <CardContent>
+                        <p className="text-gray-600 text-sm mb-4 line-clamp-2">
+                          {service.description}
+                        </p>
+                        <div className="flex items-center gap-2 text-gray-500 mb-4">
+                          <MapPin className="h-4 w-4" />
+                          <span className="text-sm">{service.city}</span>
+                        </div>
+                        <div className="flex gap-2">
+                          {service.whatsapp && (
+                            <Button className="flex-1" variant="gold">
+                              <MessageCircle className="mr-2 h-4 w-4" />
+                              WhatsApp
+                            </Button>
+                          )}
+                          <Button variant="outline" size="icon">
+                            <Phone className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  </Link>
+                </motion.div>
+              ))
+            ) : (
+              <div className="col-span-3 text-center py-12 text-gray-600">
+                No services found
+              </div>
+            )}
           </div>
 
           {/* Pagination */}

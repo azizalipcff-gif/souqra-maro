@@ -5,11 +5,26 @@ import { User, Session } from '@supabase/supabase-js'
 import { createClient } from '@/utils/supabase/client'
 import { useRouter } from 'next/navigation'
 
+interface Profile {
+  id: string
+  full_name: string | null
+  username: string | null
+  role: 'client' | 'business_owner' | 'admin'
+  city: string | null
+  bio: string | null
+  avatar_url: string | null
+  phone: string | null
+  whatsapp: string | null
+  created_at: string | null
+}
+
 interface AuthContextType {
   user: User | null
   session: Session | null
   loading: boolean
   role: 'client' | 'business_owner' | 'admin' | null
+  profile: Profile | null
+  refreshProfile: () => Promise<void>
   signIn: (email: string, password: string) => Promise<void>
   signUp: (email: string, password: string, fullName: string) => Promise<void>
   signInWithGoogle: () => Promise<void>
@@ -26,6 +41,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [session, setSession] = useState<Session | null>(null)
   const [loading, setLoading] = useState(true)
   const [role, setRole] = useState<'client' | 'business_owner' | 'admin' | null>(null)
+  const [profile, setProfile] = useState<Profile | null>(null)
   const router = useRouter()
   const supabaseRef = useRef(createClient())
   const supabase = supabaseRef.current
@@ -39,17 +55,18 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
 
     try {
-      const { data: profile, error } = await supabase
+      const { data: profileData, error } = await supabase
         .from('profiles')
-        .select('role')
+        .select('*')
         .eq('id', userId)
         .maybeSingle()
       
       if (error) {
         console.error('[AuthContext] Error fetching user role:', error)
         setRole('client')
-      } else if (profile) {
-        setRole(profile.role as 'client' | 'business_owner' | 'admin')
+      } else if (profileData) {
+        setRole(profileData.role as 'client' | 'business_owner' | 'admin')
+        setProfile(profileData as Profile)
         hasFetchedRole.current = true
       } else {
         setRole('client')
@@ -59,6 +76,27 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       console.error('[AuthContext] Error fetching user role:', error)
       setRole('client')
       hasFetchedRole.current = true
+    }
+  }
+
+  const refreshProfile = async () => {
+    if (!user?.id) return
+    
+    try {
+      const { data: profileData, error } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('id', user.id)
+        .maybeSingle()
+      
+      if (error) {
+        console.error('[AuthContext] Error refreshing profile:', error)
+      } else if (profileData) {
+        setRole(profileData.role as 'client' | 'business_owner' | 'admin')
+        setProfile(profileData as Profile)
+      }
+    } catch (error) {
+      console.error('[AuthContext] Error refreshing profile:', error)
     }
   }
 
@@ -92,8 +130,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       if (session?.user && (event === 'SIGNED_IN' || event === 'INITIAL_SESSION')) {
         fetchUserRole(session.user.id)
       } else if (!session?.user) {
-        // Reset role and fetch guard on sign out
+        // Reset role, profile, and fetch guard on sign out
         setRole(null)
+        setProfile(null)
         hasFetchedRole.current = false
       }
       
@@ -153,7 +192,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const isAuthenticated = () => !!user
 
   return (
-    <AuthContext.Provider value={{ user, session, loading, role, signIn, signUp, signInWithGoogle, signOut, isAdmin, isBusinessOwner, isAuthenticated }}>
+    <AuthContext.Provider value={{ user, session, loading, role, profile, refreshProfile, signIn, signUp, signInWithGoogle, signOut, isAdmin, isBusinessOwner, isAuthenticated }}>
       {children}
     </AuthContext.Provider>
   )

@@ -6,11 +6,14 @@ import { createClient } from '@/utils/supabase/client'
 import { Header } from '@/components/layout/header'
 import { Footer } from '@/components/layout/footer'
 import { EditProfileForm } from '@/components/profile/EditProfileForm'
+import { AddBusinessForm } from '@/components/dashboard/AddBusinessForm'
+import { AddServiceForm } from '@/components/dashboard/AddServiceForm'
 import { Loader2, ArrowLeft, CheckCircle, AlertCircle } from 'lucide-react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 
 interface ProfileData {
   full_name: string | undefined
@@ -25,7 +28,7 @@ interface ProfileData {
 }
 
 export default function EditProfilePage() {
-  const { user } = useAuth()
+  const { user, refreshProfile } = useAuth()
   const router = useRouter()
   const supabase = createClient()
   const [loading, setLoading] = useState(true)
@@ -93,6 +96,9 @@ export default function EditProfilePage() {
         console.error('Error updating profile:', error)
         toast.error('Failed to update profile')
       } else {
+        // Refresh profile data in context
+        await refreshProfile()
+        
         toast.success('Profile updated successfully!', {
           description: 'Your changes have been saved.',
           icon: <CheckCircle className="h-5 w-5 text-green-600" />,
@@ -142,27 +148,45 @@ export default function EditProfilePage() {
               </Button>
             </Link>
             <div>
-              <h1 className="text-3xl font-bold text-gray-900">Edit Profile</h1>
-              <p className="text-gray-600">Update your profile information and images</p>
+              <h1 className="text-3xl font-bold text-gray-900">Profile Settings</h1>
+              <p className="text-gray-600">Update your profile, add businesses, and services</p>
             </div>
           </div>
 
-          {/* Form */}
-          {profileData ? (
-            <EditProfileForm
-              initialData={profileData}
-              onSubmit={handleSubmit}
-              isLoading={saving}
-            />
-          ) : (
-            <div className="text-center py-12">
-              <AlertCircle className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-              <p className="text-gray-600">Failed to load profile data</p>
-              <Button onClick={loadProfile} className="mt-4">
-                Retry
-              </Button>
-            </div>
-          )}
+          {/* Tabs */}
+          <Tabs defaultValue="profile" className="w-full">
+            <TabsList className="grid w-full grid-cols-3">
+              <TabsTrigger value="profile">Profile</TabsTrigger>
+              <TabsTrigger value="business">Add Business</TabsTrigger>
+              <TabsTrigger value="service">Add Service</TabsTrigger>
+            </TabsList>
+            
+            <TabsContent value="profile">
+              {profileData ? (
+                <EditProfileForm
+                  initialData={profileData}
+                  onSubmit={handleSubmit}
+                  isLoading={saving}
+                />
+              ) : (
+                <div className="text-center py-12">
+                  <AlertCircle className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+                  <p className="text-gray-600">Failed to load profile data</p>
+                  <Button onClick={loadProfile} className="mt-4">
+                    Retry
+                  </Button>
+                </div>
+              )}
+            </TabsContent>
+            
+            <TabsContent value="business">
+              <AddBusinessForm />
+            </TabsContent>
+            
+            <TabsContent value="service">
+              <AddServiceForm />
+            </TabsContent>
+          </Tabs>
         </div>
       </div>
       <Footer />
