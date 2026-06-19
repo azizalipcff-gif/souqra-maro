@@ -11,7 +11,7 @@ create table if not exists businesses (
   price numeric,
   whatsapp text,
   image_url text,
-  status text default 'active',
+  status text default 'pending',
   created_at timestamp default now(),
   updated_at timestamp default now()
 );
@@ -35,6 +35,17 @@ using (auth.uid() = owner_id);
 create policy "Owner can delete" 
 on businesses for delete 
 using (auth.uid() = owner_id);
+
+-- Admin full access policies
+create policy "Admin full access businesses" 
+on businesses for all 
+using (
+  exists (
+    select 1 from profiles 
+    where profiles.id = auth.uid() 
+    and profiles.role = 'admin'
+  )
+);
 
 -- Index for better performance
 create index if not exists businesses_owner_id_idx on businesses(owner_id);

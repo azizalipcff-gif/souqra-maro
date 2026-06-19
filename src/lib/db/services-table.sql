@@ -15,7 +15,7 @@ create table if not exists services (
   featured boolean default false,
   rating numeric default 0,
   reviews_count integer default 0,
-  status text default 'active',
+  status text default 'pending',
   created_at timestamp default now(),
   updated_at timestamp default now()
 );
@@ -39,6 +39,17 @@ using (auth.uid() = owner_id);
 create policy "Owner can delete" 
 on services for delete 
 using (auth.uid() = owner_id);
+
+-- Admin full access policies
+create policy "Admin full access services" 
+on services for all 
+using (
+  exists (
+    select 1 from profiles 
+    where profiles.id = auth.uid() 
+    and profiles.role = 'admin'
+  )
+);
 
 -- Index for better performance
 create index if not exists services_owner_id_idx on services(owner_id);
