@@ -8,7 +8,8 @@ import { BusinessCard } from '@/components/marketplace/BusinessCard'
 import { ProductCard } from '@/components/marketplace/ProductCard'
 import { CategoryCard } from '@/components/marketplace/CategoryCard'
 import { Button } from '@/components/ui/button'
-import { Building2, ShoppingBag, TrendingUp, Star, ArrowRight, Loader2 } from 'lucide-react'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+import { Building2, ShoppingBag, TrendingUp, Star, ArrowRight, Loader2, Filter, X } from 'lucide-react'
 import Link from 'next/link'
 import { createClient } from '@/utils/supabase/client'
 
@@ -128,24 +129,81 @@ const mockProducts = [
   },
 ]
 
+const CITIES = [
+  'All Cities',
+  'Casablanca',
+  'Rabat',
+  'Tanger',
+  'Marrakech',
+  'Agadir',
+  'Fes',
+  'Berkane',
+  'Oujda',
+  'Autre'
+]
+
+const CATEGORIES = [
+  'All Categories',
+  'Electronics',
+  'Photography',
+  'Web Dev',
+  'Cleaning',
+  'Cars',
+  'Design',
+  'Food',
+  'Other'
+]
+
+const RATINGS = [
+  'All Ratings',
+  '4+ Stars',
+  '3+ Stars',
+  '2+ Stars',
+  '1+ Stars'
+]
+
 export default function MarketplacePage() {
   const supabase = createClient()
   const [businesses, setBusinesses] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
+  const [searchQuery, setSearchQuery] = useState('')
+  const [selectedCategory, setSelectedCategory] = useState('All Categories')
+  const [selectedCity, setSelectedCity] = useState('All Cities')
+  const [selectedRating, setSelectedRating] = useState('All Ratings')
+  const [showFilters, setShowFilters] = useState(false)
 
   useEffect(() => {
     const fetchBusinesses = async () => {
       try {
-        const { data, error } = await supabase
+        let query = supabase
           .from('businesses')
           .select('*')
           .eq('status', 'active')
-          .order('created_at', { ascending: false })
+
+        // Apply filters
+        if (selectedCategory !== 'All Categories') {
+          query = query.eq('category', selectedCategory)
+        }
+        if (selectedCity !== 'All Cities') {
+          query = query.eq('city', selectedCity)
+        }
+
+        const { data, error } = await query.order('created_at', { ascending: false })
 
         if (error) {
           console.error('Error fetching businesses:', error)
         } else {
-          setBusinesses(data || [])
+          // Filter by search query locally
+          let filteredData = data || []
+          if (searchQuery) {
+            const queryLower = searchQuery.toLowerCase()
+            filteredData = filteredData.filter((business: any) =>
+              business.title?.toLowerCase().includes(queryLower) ||
+              business.description?.toLowerCase().includes(queryLower) ||
+              business.category?.toLowerCase().includes(queryLower)
+            )
+          }
+          setBusinesses(filteredData)
         }
       } catch (error) {
         console.error('Error fetching businesses:', error)
@@ -155,7 +213,16 @@ export default function MarketplacePage() {
     }
 
     fetchBusinesses()
-  }, [supabase])
+  }, [supabase, selectedCategory, selectedCity, searchQuery])
+
+  const clearFilters = () => {
+    setSearchQuery('')
+    setSelectedCategory('All Categories')
+    setSelectedCity('All Cities')
+    setSelectedRating('All Ratings')
+  }
+
+  const hasActiveFilters = searchQuery || selectedCategory !== 'All Categories' || selectedCity !== 'All Cities' || selectedRating !== 'All Ratings'
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-white via-blue-50 to-white">
@@ -227,18 +294,103 @@ export default function MarketplacePage() {
       {/* Featured Businesses */}
       <section className="py-20 bg-white">
         <div className="container mx-auto px-4">
-          <div className="flex items-center justify-between mb-10">
+          <div className="flex flex-col md:flex-row md:items-center md:input-between mb-10 gap-4">
             <div>
               <h2 className="text-3xl font-bold text-gray-900 mb-2">Featured Businesses</h2>
               <p className="text-gray-600">Top-rated businesses across Morocco</p>
             </div>
-            <Link href="/businesses">
-              <Button variant="outline" className="hover:bg-blue-50 hover:border-blue-300 transition-colors">
-                View All
-                <ArrowRight className="ml-2 h-4 w-4" />
+            <div className="flex items-center gap-3">
+              <Button
+                variant="outline"
+                onClick={() => setShowFilters(!showFilters)}
+                className={showFilters ? 'bg-blue-50 border-blue-300' : ''}
+              >
+                <Filter className="h-4 w-4 mr-2" />
+                Filters
               </Button>
-            </Link>
+              {hasActiveFilters && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={clearFilters}
+                  className="text-red-600 hover:text-red-700"
+                >
+                  <X className="h-4 w-4 mr-1" />
+                  Clear
+                </Button>
+              )}
+              <Link href="/businesses">
+                <Button variant="outline" className="hover:bg-blue-50 hover:border-blue-300 transition-colors">
+                  View All
+                  <ArrowRight className="ml-2 h-4 w-4" />
+                </Button>
+              </Link>
+            </div>
           </div>
+
+          {/* Filters */}
+          {showFilters && (
+            <div className="bg-gray-50 dark:bg-gray-800 rounded-lg p-6 mb-6 border border-gray-200 dark:border-gray-700">
+              <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                <div className="space-y-2">
+                  <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Search</label>
+                  <input
+                    type="text"
+                    placeholder="Search businesses..."
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Category</label>
+                  <Select value={selectedCategory} onValueChange={setSelectedCategory}>
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {CATEGORIES.map((category) => (
+                        <SelectItem key={category} value={category}>
+                          {category}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2">
+                  <label className="text-sm font-medium text-gray-700 dark:text-gray-300">City</label>
+                  <Select value={selectedCity} onValueChange={setSelectedCity}>
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {CITIES.map((city) => (
+                        <SelectItem key={city} value={city}>
+                          {city}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2">
+                  <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Rating</label>
+                  <Select value={selectedRating} onValueChange={setSelectedRating}>
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {RATINGS.map((rating) => (
+                        <SelectItem key={rating} value={rating}>
+                          {rating}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+            </div>
+          )}
+
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
             {loading ? (
               <div className="col-span-4 flex items-center justify-center py-12">
@@ -262,7 +414,7 @@ export default function MarketplacePage() {
               ))
             ) : (
               <div className="col-span-4 text-center py-12 text-gray-600">
-                No businesses found
+                {hasActiveFilters ? 'No businesses match your filters' : 'No businesses found'}
               </div>
             )}
           </div>
